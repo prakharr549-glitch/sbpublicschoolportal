@@ -8,7 +8,6 @@ import {
   Info,
   Mail,
   Megaphone,
-  Siren,
   Images,
   LayoutDashboard,
   GraduationCap,
@@ -28,7 +27,6 @@ const navItems = [
   { href: "/gallery", label: "Gallery", icon: Images },
   { href: "/about", label: "About Us", icon: Info },
   { href: "/contact", label: "Contact", icon: Mail },
-  { href: "/emergency-broadcasts", label: "Emergency Broadcasts", icon: Siren },
 ];
 
 const userRoleNavItems = [
