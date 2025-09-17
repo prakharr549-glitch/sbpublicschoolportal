@@ -11,6 +11,7 @@ import {
   Megaphone,
   Siren,
   Images,
+  User,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -43,7 +44,7 @@ export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
             href={href}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-primary hover:bg-primary/10",
-              pathname === href ? "bg-primary/10 text-primary font-medium" : ""
+              (pathname === href || (href === "/" && pathname.startsWith("/profile"))) ? "bg-primary/10 text-primary font-medium" : ""
             )}
           >
             <Icon className="h-4 w-4" />
