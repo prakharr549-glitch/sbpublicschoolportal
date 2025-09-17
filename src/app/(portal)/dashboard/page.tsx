@@ -27,7 +27,7 @@ const overviewItems = [
     title: "Get Directions",
     value: "Location",
     icon: Map,
-    link: "https://www.google.com/maps/search/?api=1&query=S.B+Public+School",
+    link: "https://maps.app.goo.gl/SHT8q9eGsVoSzCLGA",
     description: "Find the quickest route to our campus."
   },
 ];
