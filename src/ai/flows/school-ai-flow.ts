@@ -22,7 +22,7 @@ export async function answerQuestion(input: AnswerQuestionInput): Promise<Answer
 
 const prompt = ai.definePrompt({
   name: 'schoolAiPrompt',
-  input: {schema: AnswerQuestionInputSchema},
+  input: {schema: z.object({input: AnswerQuestionInputSchema})},
   output: {schema: AnswerQuestionOutputSchema},
   prompt: `You are a friendly and knowledgeable AI school assistant. Your goal is to help students with their homework and answer their questions in a clear, concise, and educational manner.
 
@@ -40,7 +40,7 @@ const schoolAiFlow = ai.defineFlow(
     outputSchema: AnswerQuestionOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
+    const {output} = await prompt({input});
     return output!;
   }
 );
