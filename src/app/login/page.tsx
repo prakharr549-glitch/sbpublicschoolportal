@@ -23,14 +23,28 @@ export default function LoginPage() {
   const handleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      // After sign-in, the useEffect will trigger the redirect to /profile
+      const result = await signInWithPopup(auth, provider);
+      const additionalInfo = getAdditionalUserInfo(result);
+      if (additionalInfo?.isNewUser) {
+        router.push("/profile");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error) {
       console.error("Error signing in with Google", error);
     }
   };
 
-  if (loading || user) {
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (user) {
+     // While redirecting, show a loader
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

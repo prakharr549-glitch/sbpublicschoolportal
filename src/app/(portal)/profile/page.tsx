@@ -28,11 +28,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
-import { useEffect } from "react";
+import { auth, db } from "@/lib/firebase";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -51,12 +52,13 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const user = auth.currentUser;
   const router = useRouter();
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: user?.displayName || "",
-      email: user?.email || "",
+      name: "",
+      email: "",
       phone: "",
       address: "",
       role: "student",
@@ -67,16 +69,24 @@ export default function ProfilePage() {
   const selectedRole = form.watch("role");
 
   useEffect(() => {
-    if (user) {
-      form.reset({
-        name: user.displayName || "",
-        email: user.email || "",
-        phone: "",
-        address: "",
-        role: "student",
-        password: "",
-      });
+    async function fetchProfile() {
+      if (user) {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          form.reset(userDoc.data() as ProfileFormValues);
+        } else {
+          form.reset({
+            name: user.displayName || "",
+            email: user.email || "",
+            phone: "",
+            address: "",
+            role: "student",
+          });
+        }
+      }
+      setIsProfileLoading(false);
     }
+    fetchProfile();
   }, [user, form]);
 
   async function onSubmit(data: ProfileFormValues) {
@@ -91,14 +101,25 @@ export default function ProfilePage() {
 
     try {
         await updateProfile(user, { displayName: data.name });
-        // In a real application, you would save the additional profile data (phone, address, role) 
-        // to a database like Firestore, and handle password updates securely.
+        
+        const userProfileData = {
+          uid: user.uid,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          role: data.role,
+        };
+
+        await setDoc(doc(db, "users", user.uid), userProfileData, { merge: true });
+        
         toast({
             title: "Profile Updated",
             description: "Your profile has been successfully updated.",
         });
         router.push('/dashboard');
     } catch (error) {
+        console.error("Error updating profile:", error);
         toast({
             variant: "destructive",
             title: "Update Failed",
@@ -107,7 +128,7 @@ export default function ProfilePage() {
     }
   }
 
-  if (!user) {
+  if (!user || isProfileLoading) {
     return (
         <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
