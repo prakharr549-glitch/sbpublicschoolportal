@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "school-campus",
+      "description": "A beautiful, modern school campus on a sunny day.",
+      "imageUrl": "https://picsum.photos/seed/1/1200/800",
+      "imageHint": "school building"
+    }
+  ]
 }
