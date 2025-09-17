@@ -74,7 +74,15 @@ export default function ProfilePage() {
       if (user) {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
-          form.reset(userDoc.data() as ProfileFormValues);
+          const data = userDoc.data();
+          form.reset({
+            name: data.name || "",
+            email: data.email || "",
+            phone: data.phone || "",
+            address: data.address || "",
+            role: data.role || "student",
+            password: data.password || "",
+          });
         } else {
           form.reset({
             name: user.displayName || "",
