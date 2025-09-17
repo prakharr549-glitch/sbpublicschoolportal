@@ -3,17 +3,17 @@
  * @fileOverview An AI flow for answering student questions.
  *
  * - answerQuestion - A function that provides answers to student questions.
- * - AnswerQuestionInputSchema - The input type for the answerQuestion function.
- * - AnswerQuestionOutputSchema - The return type for the answerQuestion function.
+ * - AnswerQuestionInput - The input type for the answerQuestion function.
+ * - AnswerQuestionOutput - The return type for the answerQuestion function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
-export const AnswerQuestionInputSchema = z.string();
+const AnswerQuestionInputSchema = z.string();
 export type AnswerQuestionInput = z.infer<typeof AnswerQuestionInputSchema>;
 
-export const AnswerQuestionOutputSchema = z.string();
+const AnswerQuestionOutputSchema = z.string();
 export type AnswerQuestionOutput = z.infer<typeof AnswerQuestionOutputSchema>;
 
 export async function answerQuestion(input: AnswerQuestionInput): Promise<AnswerQuestionOutput> {
