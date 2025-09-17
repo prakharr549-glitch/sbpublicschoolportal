@@ -33,13 +33,6 @@ const navItems = [
   { href: "/emergency-broadcasts", label: "Emergency Broadcasts", icon: Siren },
 ];
 
-const detailNavItems = [
-    { href: "/students", label: "Student Details", icon: GraduationCap },
-    { href: "/teachers", label: "Teacher Details", icon: Briefcase },
-    { href: "/admins", label: "Admin Details", icon: UserCog },
-    { href: "/drivers", label: "Driver Details", icon: Truck },
-]
-
 export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
   const pathname = usePathname();
 
@@ -63,26 +56,6 @@ export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
             {label}
           </Link>
         ))}
-      </div>
-      <div className="mt-4 px-4">
-        <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-          User Details
-        </h3>
-        <div className="flex flex-col gap-1">
-            {detailNavItems.map(({ href, label, icon: Icon }) => (
-            <Link
-                key={href}
-                href={href}
-                className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-primary hover:bg-primary/10",
-                (pathname === href) ? "bg-primary/10 text-primary font-medium" : ""
-                )}
-            >
-                <Icon className="h-4 w-4" />
-                {label}
-            </Link>
-            ))}
-        </div>
       </div>
     </nav>
   );
