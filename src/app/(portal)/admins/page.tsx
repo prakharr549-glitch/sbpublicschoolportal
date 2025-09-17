@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,8 +40,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { db } from "@/lib/firebase";
+import { addDoc, collection, onSnapshot, query } from "firebase/firestore";
 
 const adminRoles = [
   "Principal",
@@ -59,17 +62,12 @@ const adminFormSchema = z.object({
 
 type AdminFormValues = z.infer<typeof adminFormSchema>;
 
-type Admin = AdminFormValues & { id: number };
-
-const initialAdmins: Admin[] = [
-  { id: 1, name: "Dr. Evelyn Reed", role: "Principal", mobile: "1234567890" },
-  { id: 2, name: "Mr. Samuel Grant", role: "Vice Principal", mobile: "0987654321" },
-  { id: 3, name: "Ms. Helena Shaw", role: "Director", mobile: "1122334455" },
-];
+type Admin = AdminFormValues & { id: string };
 
 export default function AdminsPage() {
-  const [admins, setAdmins] = useState<Admin[]>(initialAdmins);
+  const [admins, setAdmins] = useState<Admin[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   const form = useForm<AdminFormValues>({
@@ -80,18 +78,37 @@ export default function AdminsPage() {
     },
   });
 
-  function onSubmit(data: AdminFormValues) {
-    const newAdmin: Admin = {
-      id: admins.length + 1,
-      ...data,
-    };
-    setAdmins([...admins, newAdmin]);
-    toast({
-      title: "Admin Added",
-      description: `${data.name} has been added as a ${data.role}.`,
+  useEffect(() => {
+    const q = query(collection(db, "admins"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const adminsData: Admin[] = [];
+      querySnapshot.forEach((doc) => {
+        adminsData.push({ id: doc.id, ...(doc.data() as AdminFormValues) });
+      });
+      setAdmins(adminsData);
+      setIsLoading(false);
     });
-    form.reset();
-    setIsDialogOpen(false);
+
+    return () => unsubscribe();
+  }, []);
+
+  async function onSubmit(data: AdminFormValues) {
+    try {
+      await addDoc(collection(db, "admins"), data);
+      toast({
+        title: "Admin Added",
+        description: `${data.name} has been added as a ${data.role}.`,
+      });
+      form.reset();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding admin: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was a problem adding the admin.",
+      });
+    }
   }
 
   return (
@@ -168,7 +185,10 @@ export default function AdminsPage() {
                 />
                  <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit">Save Admin</Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Admin
+                  </Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -181,32 +201,38 @@ export default function AdminsPage() {
           <CardTitle>Administrator List</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Mobile Number</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {admins.length > 0 ? (
-                admins.map((admin) => (
-                  <TableRow key={admin.id}>
-                    <TableCell className="font-medium">{admin.name}</TableCell>
-                    <TableCell>{admin.role}</TableCell>
-                    <TableCell>{admin.mobile}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-24">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">
-                    No administrators found.
-                  </TableCell>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Mobile Number</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {admins.length > 0 ? (
+                  admins.map((admin) => (
+                    <TableRow key={admin.id}>
+                      <TableCell className="font-medium">{admin.name}</TableCell>
+                      <TableCell>{admin.role}</TableCell>
+                      <TableCell>{admin.mobile}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                      No administrators found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
