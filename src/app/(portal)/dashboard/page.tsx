@@ -27,7 +27,7 @@ const overviewItems = [
     title: "Get Directions",
     value: "Location",
     icon: Map,
-    link: "https://www.google.com/maps/dir/?api=1&destination=S.B.%20Public%20School,%20Gorakhpur",
+    link: "https://www.google.com/maps/dir/?api=1&destination=https://maps.app.goo.gl/HaDbqzQ7vQiEqMkd7",
     description: "Find the quickest route to our campus."
   },
 ];
