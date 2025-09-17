@@ -27,7 +27,7 @@ const overviewItems = [
     title: "Get Directions",
     value: "Location",
     icon: Map,
-    link: "https://www.google.com/maps/dir/?api=1&destination=https://maps.app.goo.gl/HaDbqzQ7vQiEqMkd7",
+    link: "https://www.google.com/maps/dir/?api=1&destination=S.B%20PUBLIC%20SCHOOL%2C%20BHAWANIPUR%20JAIRAMPUR%2C%20ITAYE%20ROAD%2C%20Mariahu",
     description: "Find the quickest route to our campus."
   },
 ];
