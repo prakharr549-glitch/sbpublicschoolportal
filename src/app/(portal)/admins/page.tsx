@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -40,11 +39,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
+import Link from "next/link";
 
 const adminRoles = [
   "Principal",
@@ -65,6 +65,23 @@ type AdminFormValues = z.infer<typeof adminFormSchema>;
 
 type Admin = AdminFormValues & { id: string };
 
+const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+    </svg>
+  );
+
 export default function AdminsPage() {
   const [user, authLoading] = useAuthState(auth);
   const [admins, setAdmins] = useState<Admin[]>([]);
@@ -81,7 +98,11 @@ export default function AdminsPage() {
   });
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
+    if(!user) {
+        setIsDataLoading(false);
+        return;
+    }
 
     const q = query(collection(db, "admins"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -226,6 +247,7 @@ export default function AdminsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Mobile Number</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -235,11 +257,27 @@ export default function AdminsPage() {
                       <TableCell className="font-medium">{admin.name}</TableCell>
                       <TableCell>{admin.role}</TableCell>
                       <TableCell>{admin.mobile}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                            <Button asChild variant="outline" size="icon">
+                                <a href={`tel:${admin.mobile}`}>
+                                    <Phone className="h-4 w-4" />
+                                    <span className="sr-only">Call</span>
+                                </a>
+                            </Button>
+                            <Button asChild variant="outline" size="icon">
+                                <a href={`https://wa.me/${admin.mobile}`} target="_blank" rel="noopener noreferrer">
+                                    <WhatsAppIcon className="h-4 w-4" />
+                                    <span className="sr-only">Message on WhatsApp</span>
+                                </a>
+                            </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
+                    <TableCell colSpan={4} className="h-24 text-center">
                       No administrators found.
                     </TableCell>
                   </TableRow>
