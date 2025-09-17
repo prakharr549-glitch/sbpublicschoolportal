@@ -12,13 +12,14 @@ import {
   Siren,
   Images,
   User,
+  LayoutDashboard
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { SchoolLogo } from "@/components/icons";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/announcements", label: "Announcements", icon: Megaphone },
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/curriculum", label: "Curriculum", icon: BookOpen },
@@ -33,7 +34,7 @@ export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
 
   return (
     <nav className={cn("flex flex-col gap-4", className)}>
-      <Link href="/" className="flex items-center gap-2 px-4 text-lg font-bold text-primary">
+      <Link href="/dashboard" className="flex items-center gap-2 px-4 text-lg font-bold text-primary">
         <SchoolLogo className="h-8 w-8" />
         <span className="font-headline">SB Public Portal</span>
       </Link>
@@ -44,7 +45,7 @@ export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
             href={href}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-primary hover:bg-primary/10",
-              (pathname === href || (href === "/" && pathname.startsWith("/profile"))) ? "bg-primary/10 text-primary font-medium" : ""
+              (pathname === href) ? "bg-primary/10 text-primary font-medium" : ""
             )}
           >
             <Icon className="h-4 w-4" />
