@@ -14,13 +14,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Card,
   CardContent,
   CardDescription,
@@ -41,10 +34,6 @@ const profileFormSchema = z.object({
     message: "Name must be at least 2 characters.",
   }),
   email: z.string().email(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  role: z.enum(["student", "teacher", "admin", "driver"]),
-  password: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -60,14 +49,8 @@ export default function ProfilePage() {
     defaultValues: {
       name: "",
       email: "",
-      phone: "",
-      address: "",
-      role: "student",
-      password: "",
     },
   });
-
-  const selectedRole = form.watch("role");
 
   useEffect(() => {
     async function fetchProfile() {
@@ -78,18 +61,11 @@ export default function ProfilePage() {
           form.reset({
             name: data.name || "",
             email: data.email || "",
-            phone: data.phone || "",
-            address: data.address || "",
-            role: data.role || "student",
-            password: data.password || "",
           });
         } else {
           form.reset({
             name: user.displayName || "",
             email: user.email || "",
-            phone: "",
-            address: "",
-            role: "student",
           });
         }
       }
@@ -115,9 +91,6 @@ export default function ProfilePage() {
           uid: user.uid,
           name: data.name,
           email: data.email,
-          phone: data.phone,
-          address: data.address,
-          role: data.role,
         };
 
         await setDoc(doc(db, "users", user.uid), userProfileData, { merge: true });
@@ -127,20 +100,7 @@ export default function ProfilePage() {
             description: "Your profile has been successfully updated.",
         });
 
-        switch (data.role) {
-          case "admin":
-            router.push('/admin-dashboard');
-            break;
-          case "teacher":
-            router.push('/teacher-dashboard');
-            break;
-          case "driver":
-            router.push('/driver-dashboard');
-            break;
-          default:
-            router.push('/dashboard');
-            break;
-        }
+        router.push('/dashboard');
 
     } catch (error) {
         console.error("Error updating profile:", error);
@@ -202,71 +162,6 @@ export default function ProfilePage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your phone number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="student">Student</SelectItem>
-                          <SelectItem value="teacher">Teacher</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="driver">Driver</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {selectedRole !== "student" && (
-                   <FormField
-                   control={form.control}
-                   name="password"
-                   render={({ field }) => (
-                     <FormItem>
-                       <FormLabel>Password</FormLabel>
-                       <FormControl>
-                         <Input type="password" placeholder="Set a password" {...field} />
-                       </FormControl>
-                       <FormMessage />
-                     </FormItem>
-                   )}
-                 />
-                )}
                 
                 <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
