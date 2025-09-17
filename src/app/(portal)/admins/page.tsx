@@ -42,8 +42,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
 
 const adminRoles = [
   "Principal",
@@ -65,9 +66,10 @@ type AdminFormValues = z.infer<typeof adminFormSchema>;
 type Admin = AdminFormValues & { id: string };
 
 export default function AdminsPage() {
+  const [user, authLoading] = useAuthState(auth);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const { toast } = useToast();
 
   const form = useForm<AdminFormValues>({
@@ -79,6 +81,8 @@ export default function AdminsPage() {
   });
 
   useEffect(() => {
+    if (authLoading || !user) return;
+
     const q = query(collection(db, "admins"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const adminsData: Admin[] = [];
@@ -86,11 +90,19 @@ export default function AdminsPage() {
         adminsData.push({ id: doc.id, ...(doc.data() as AdminFormValues) });
       });
       setAdmins(adminsData);
-      setIsLoading(false);
+      setIsDataLoading(false);
+    }, (error) => {
+        console.error("Error fetching admins:", error);
+        toast({
+            variant: "destructive",
+            title: "Permission Denied",
+            description: "You do not have permission to view this data.",
+        });
+        setIsDataLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user, authLoading, toast]);
 
   async function onSubmit(data: AdminFormValues) {
     try {
@@ -110,6 +122,8 @@ export default function AdminsPage() {
       });
     }
   }
+
+  const isLoading = authLoading || isDataLoading;
 
   return (
     <div className="flex flex-col gap-6">
