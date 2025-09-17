@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Calendar,
   Info,
-  Mail,
+  BookOpen,
   Megaphone,
   Images,
   LayoutDashboard,
@@ -24,7 +24,7 @@ const navItems = [
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/gallery", label: "Gallery", icon: Images },
   { href: "/about", label: "About Us", icon: Info },
-  { href: "/contact", label: "Contact", icon: Mail },
+  { href: "/homework", label: "Homework", icon: BookOpen },
 ];
 
 const userRoleNavItems = [
