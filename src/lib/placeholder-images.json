@@ -5,6 +5,54 @@
       "description": "A beautiful, modern school campus on a sunny day.",
       "imageUrl": "https://picsum.photos/seed/1/1200/800",
       "imageHint": "school building"
+    },
+    {
+      "id": "gallery-1",
+      "description": "Students in a classroom.",
+      "imageUrl": "https://picsum.photos/seed/2/400/400",
+      "imageHint": "students classroom"
+    },
+    {
+      "id": "gallery-2",
+      "description": "School library.",
+      "imageUrl": "https://picsum.photos/seed/3/400/400",
+      "imageHint": "school library"
+    },
+    {
+      "id": "gallery-3",
+      "description": "Students playing sports.",
+      "imageUrl": "https://picsum.photos/seed/4/400/400",
+      "imageHint": "students sports"
+    },
+    {
+      "id": "gallery-4",
+      "description": "Science lab.",
+      "imageUrl": "https://picsum.photos/seed/5/400/400",
+      "imageHint": "science lab"
+    },
+    {
+      "id": "gallery-5",
+      "description": "School auditorium.",
+      "imageUrl": "https://picsum.photos/seed/6/400/400",
+      "imageHint": "school auditorium"
+    },
+    {
+      "id": "gallery-6",
+      "description": "Art class.",
+      "imageUrl": "https://picsum.photos/seed/7/400/400",
+      "imageHint": "art class"
+    },
+    {
+      "id": "gallery-7",
+      "description": "Graduation ceremony.",
+      "imageUrl": "https://picsum.photos/seed/8/400/400",
+      "imageHint": "graduation ceremony"
+    },
+    {
+      "id": "gallery-8",
+      "description": "School playground.",
+      "imageUrl": "https://picsum.photos/seed/9/400/400",
+      "imageHint": "school playground"
     }
   ]
 }

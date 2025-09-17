@@ -10,6 +10,7 @@ import {
   Mail,
   Megaphone,
   Siren,
+  Images,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/announcements", label: "Announcements", icon: Megaphone },
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/curriculum", label: "Curriculum", icon: BookOpen },
+  { href: "/gallery", label: "Gallery", icon: Images },
   { href: "/about", label: "About Us", icon: Info },
   { href: "/contact", label: "Contact", icon: Mail },
   { href: "/emergency-broadcasts", label: "Emergency Broadcasts", icon: Siren },
