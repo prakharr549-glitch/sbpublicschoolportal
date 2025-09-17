@@ -32,6 +32,7 @@ import { auth } from "@/lib/firebase";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { updateProfile } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -49,6 +50,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
   const { toast } = useToast();
   const user = auth.currentUser;
+  const router = useRouter();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -95,6 +97,7 @@ export default function ProfilePage() {
             title: "Profile Updated",
             description: "Your profile has been successfully updated.",
         });
+        router.push('/dashboard');
     } catch (error) {
         toast({
             variant: "destructive",
@@ -218,7 +221,7 @@ export default function ProfilePage() {
               
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Profile
+                Save and Continue to Dashboard
               </Button>
             </form>
           </Form>

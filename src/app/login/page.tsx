@@ -15,13 +15,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      // If user object has no display name, it's likely a new user.
-      // This is a proxy for isNewUser, which is only available on initial sign-in.
-      if (!user.displayName) {
-        router.push("/profile");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push("/profile");
     }
   }, [user, router]);
 
@@ -29,14 +23,8 @@ export default function LoginPage() {
   const handleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const additionalUserInfo = getAdditionalUserInfo(result);
-      // Explicitly check for new user on sign-in and redirect
-      if (additionalUserInfo?.isNewUser) {
-        router.push("/profile");
-      } else {
-        router.push("/dashboard");
-      }
+      await signInWithPopup(auth, provider);
+      // After sign-in, the useEffect will trigger the redirect to /profile
     } catch (error) {
       console.error("Error signing in with Google", error);
     }
