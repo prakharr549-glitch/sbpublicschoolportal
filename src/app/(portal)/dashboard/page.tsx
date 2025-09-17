@@ -5,37 +5,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Bell, Calendar, BookOpen, Building } from "lucide-react";
+import { Bot, FileText } from "lucide-react";
 import Link from 'next/link';
 
 const overviewItems = [
   {
-    title: "New Announcements",
-    value: "3",
-    icon: Bell,
-    link: "/announcements",
-    description: "Recent updates from the school administration."
+    title: "School AI",
+    value: "Since 2014",
+    icon: Bot,
+    link: "/school-ai",
+    description: "Engage with our AI-powered school assistant."
   },
   {
-    title: "Upcoming Events",
-    value: "5",
-    icon: Calendar,
-    link: "/events",
-    description: "Sports days, parent-teacher meetings, and more."
-  },
-  {
-    title: "Curriculum Areas",
-    value: "12",
-    icon: BookOpen,
-    link: "/curriculum",
-    description: "Subjects and topics for each grade level."
-  },
-  {
-    title: "School History",
-    value: "Since 1998",
-    icon: Building,
-    link: "/about",
-    description: "Learn about our mission and values."
+    title: "Admission Form",
+    value: "Submission",
+    icon: FileText,
+    link: "/admission-form",
+    description: "Submit your application for the new session."
   },
 ];
 
@@ -85,9 +71,9 @@ export default function DashboardPage() {
               <h3 className="font-semibold">Events</h3>
               <p className="text-sm text-muted-foreground">View the school calendar.</p>
             </Link>
-            <Link href="/contact" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
-              <h3 className="font-semibold">Contact Us</h3>
-              <p className="text-sm text-muted-foreground">Get in touch with the office.</p>
+            <Link href="/homework" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+              <h3 className="font-semibold">Homework</h3>
+              <p className="text-sm text-muted-foreground">Check your assignments.</p>
             </Link>
           </div>
         </CardContent>
