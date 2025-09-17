@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { updateProfile } from "firebase/auth";
 
@@ -49,7 +49,6 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
   const { toast } = useToast();
   const user = auth.currentUser;
-  const [selectedRole, setSelectedRole] = useState("student");
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -63,20 +62,20 @@ export default function ProfilePage() {
     },
   });
 
-  const role = form.watch("role");
+  const selectedRole = form.watch("role");
 
   useEffect(() => {
     if (user) {
       form.reset({
         name: user.displayName || "",
         email: user.email || "",
+        phone: "",
+        address: "",
+        role: "student",
+        password: "",
       });
     }
   }, [user, form]);
-  
-  useEffect(() => {
-    setSelectedRole(role);
-  }, [role]);
 
   async function onSubmit(data: ProfileFormValues) {
     if (!user) {
@@ -91,7 +90,7 @@ export default function ProfilePage() {
     try {
         await updateProfile(user, { displayName: data.name });
         // In a real application, you would save the additional profile data (phone, address, role) 
-        // to a database like Firestore.
+        // to a database like Firestore, and handle password updates securely.
         toast({
             title: "Profile Updated",
             description: "Your profile has been successfully updated.",
