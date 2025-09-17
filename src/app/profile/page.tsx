@@ -118,7 +118,22 @@ export default function ProfilePage() {
             title: "Profile Updated",
             description: "Your profile has been successfully updated.",
         });
-        router.push('/dashboard');
+
+        switch (data.role) {
+          case "admin":
+            router.push('/admin-dashboard');
+            break;
+          case "teacher":
+            router.push('/teacher-dashboard');
+            break;
+          case "driver":
+            router.push('/driver-dashboard');
+            break;
+          default:
+            router.push('/dashboard');
+            break;
+        }
+
     } catch (error) {
         console.error("Error updating profile:", error);
         toast({
