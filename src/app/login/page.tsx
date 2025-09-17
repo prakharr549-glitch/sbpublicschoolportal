@@ -1,45 +1,39 @@
+
 "use client";
 
 import { SchoolLogo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
-import { GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [user, loading] = useAuthState(auth);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       router.push("/profile");
     }
-  }, [user, router]);
-
+  }, [user, loading, router]);
 
   const handleSignIn = async () => {
+    setIsSigningIn(true);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      router.push("/profile");
+      // The useEffect will handle the redirect once the user state is updated.
     } catch (error) {
       console.error("Error signing in with Google", error);
+      setIsSigningIn(false); // Reset on error
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (user) {
-     // While redirecting, show a loader
+  if (loading || user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -59,7 +53,8 @@ export default function LoginPage() {
             Sign in to access the school's information portal.
           </p>
         </div>
-        <Button onClick={handleSignIn} className="w-full bg-accent hover:bg-accent/90">
+        <Button onClick={handleSignIn} className="w-full bg-accent hover:bg-accent/90" disabled={isSigningIn}>
+           {isSigningIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Sign in with Google
         </Button>
         <p className="mt-6 text-center text-xs text-muted-foreground">
