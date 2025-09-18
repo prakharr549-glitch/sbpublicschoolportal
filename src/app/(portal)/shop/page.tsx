@@ -46,7 +46,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
-import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
+import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Loader2, PlusCircle, Trash2, ShoppingCart, Upload, GalleryHorizontal } from "lucide-react";
@@ -62,6 +62,7 @@ const productFormSchema = z.object({
     z.number().positive("Price must be a positive number.")
   ),
   imageUrl: z.string().url("Please provide a valid image URL."),
+  createdAt: z.date().default(() => new Date()),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -72,6 +73,7 @@ type Product = {
   description: string;
   price: number;
   imageUrl: string;
+  createdAt: { seconds: number; nanoseconds: number; };
 };
 
 export default function ShopPage() {
@@ -98,7 +100,7 @@ export default function ShopPage() {
   useEffect(() => {
     if (authLoading) return;
 
-    const q = query(collection(db, "products"));
+    const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(20));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const productsData: Product[] = [];
       querySnapshot.forEach((doc) => {
@@ -153,7 +155,10 @@ export default function ShopPage() {
       return;
     }
     try {
-      await addDoc(collection(db, "products"), data);
+      await addDoc(collection(db, "products"), {
+        ...data,
+        createdAt: new Date(),
+      });
       toast({
         title: "Product Added",
         description: `${data.name} has been added to the shop.`,
