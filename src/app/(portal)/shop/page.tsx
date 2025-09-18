@@ -62,7 +62,6 @@ const productFormSchema = z.object({
     z.number().positive("Price must be a positive number.")
   ),
   imageUrl: z.string().url("Please upload or select an image."),
-  createdAt: z.date().default(() => new Date()),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -73,8 +72,54 @@ type Product = {
   description: string;
   price: number;
   imageUrl: string;
-  createdAt: { seconds: number; nanoseconds: number; };
+  createdAt?: { seconds: number; nanoseconds: number; };
 };
+
+const defaultProducts: Omit<Product, 'id'>[] = [
+  {
+    name: "Formal Uniform",
+    description: "Complete formal uniform set for all grades.",
+    price: 1500,
+    imageUrl: PlaceHolderImages.find(p => p.id === 'product-formal-uniform')?.imageUrl || "https://picsum.photos/seed/10/400/400"
+  },
+  {
+    name: "Sports Uniform",
+    description: "Comfortable sports uniform for physical activities.",
+    price: 800,
+    imageUrl: PlaceHolderImages.find(p => p.id === 'product-sports-uniform')?.imageUrl || "https://picsum.photos/seed/11/400/400"
+  },
+  {
+    name: "School Tie",
+    description: "Official school tie, a part of the formal uniform.",
+    price: 250,
+    imageUrl: PlaceHolderImages.find(p => p.id === 'product-tie')?.imageUrl || "https://picsum.photos/seed/12/400/400"
+  },
+  {
+    name: "School Belt",
+    description: "Durable school belt with the official school logo.",
+    price: 200,
+    imageUrl: PlaceHolderImages.find(p => p.id === 'product-belt')?.imageUrl || "https://picsum.photos/seed/13/400/400"
+  },
+  {
+    name: "School Diary",
+    description: "Student diary for the current academic session.",
+    price: 150,
+    imageUrl: PlaceHolderImages.find(p => p.id === 'product-diary')?.imageUrl || "https://picsum.photos/seed/14/400/400"
+  },
+  {
+    name: "School Bag",
+    description: "Sturdy and spacious backpack with school branding.",
+    price: 900,
+    imageUrl: PlaceHolderImages.find(p => p.id === 'product-bag')?.imageUrl || "https://picsum.photos/seed/15/400/400"
+  },
+  {
+    name: "Notebooks Set",
+    description: "A set of 6 notebooks for all subjects.",
+    price: 300,
+    imageUrl: PlaceHolderImages.find(p => p.id === 'product-notebooks')?.imageUrl || "https://picsum.photos/seed/16/400/400"
+  }
+];
+
 
 export default function ShopPage() {
   const [user, authLoading] = useAuthState(auth);
@@ -198,6 +243,7 @@ export default function ShopPage() {
 
   const isLoading = authLoading || isDataLoading;
   const fileInputId = "file-upload";
+  const displayedProducts = products.length > 0 ? products : defaultProducts.map((p, i) => ({...p, id: `default-${i}`}));
 
   return (
     <div className="flex flex-col gap-6">
@@ -278,13 +324,13 @@ export default function ShopPage() {
                                   )}
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                  <Button asChild variant="outline" size="sm">
+                                   <Button type="button" asChild variant="outline" size="sm">
                                       <label htmlFor={fileInputId} className="cursor-pointer inline-flex items-center justify-center gap-2">
                                           <Upload className="mr-2 h-4 w-4" />
                                           <span>Upload Image</span>
+                                          <input id={fileInputId} name={fileInputId} type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} disabled={uploading}/>
                                       </label>
                                   </Button>
-                                  <input id={fileInputId} name={fileInputId} type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} disabled={uploading}/>
 
                                     <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
                                         <DialogTrigger asChild>
@@ -342,9 +388,9 @@ export default function ShopPage() {
             <div className="flex justify-center items-center h-48">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-        ) : products.length > 0 ? (
+        ) : displayedProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {products.map((item) => (
+                {displayedProducts.map((item) => (
                 <Card key={item.id} className="flex flex-col">
                     <div className="relative aspect-square w-full">
                     <Image
@@ -364,7 +410,7 @@ export default function ShopPage() {
                     </CardContent>
                     <CardFooter className="flex-col items-stretch gap-2 border-t pt-4">
                     <Button className="w-full">Add to Cart</Button>
-                    {user && (
+                    {user && products.length > 0 && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm">

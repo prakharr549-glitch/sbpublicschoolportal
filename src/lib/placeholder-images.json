@@ -53,6 +53,48 @@
       "description": "School playground.",
       "imageUrl": "https://picsum.photos/seed/9/400/400",
       "imageHint": "school playground"
+    },
+    {
+      "id": "product-formal-uniform",
+      "description": "A complete formal school uniform.",
+      "imageUrl": "https://picsum.photos/seed/10/400/400",
+      "imageHint": "school uniform"
+    },
+    {
+      "id": "product-sports-uniform",
+      "description": "A school sports uniform.",
+      "imageUrl": "https://picsum.photos/seed/11/400/400",
+      "imageHint": "sports uniform"
+    },
+    {
+      "id": "product-tie",
+      "description": "A school tie.",
+      "imageUrl": "https://picsum.photos/seed/12/400/400",
+      "imageHint": "school tie"
+    },
+    {
+      "id": "product-belt",
+      "description": "A school belt.",
+      "imageUrl": "https://picsum.photos/seed/13/400/400",
+      "imageHint": "school belt"
+    },
+    {
+      "id": "product-diary",
+      "description": "A school diary.",
+      "imageUrl": "https://picsum.photos/seed/14/400/400",
+      "imageHint": "school diary"
+    },
+    {
+      "id": "product-bag",
+      "description": "A school bag.",
+      "imageUrl": "https://picsum.photos/seed/15/400/400",
+      "imageHint": "school bag"
+    },
+    {
+      "id": "product-notebooks",
+      "description": "A set of school notebooks.",
+      "imageUrl": "https://picsum.photos/seed/16/400/400",
+      "imageHint": "school notebooks"
     }
   ]
 }
