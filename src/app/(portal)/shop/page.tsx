@@ -80,7 +80,7 @@ const defaultProducts: Omit<Product, 'id'>[] = [
     name: "Formal Uniform",
     description: "Complete formal uniform set for all grades.",
     price: 1500,
-    imageUrl: PlaceHolderImages.find(p => p.id === 'product-formal-uniform')?.imageUrl || "https://picsum.photos/seed/10/400/400"
+    imageUrl: PlaceHolderImages.find(p => p.id === 'product-formal-uniform')?.imageUrl || "https://storage.googleapis.com/studio-assets/studio-images/product-formal-uniform.jpg"
   },
   {
     name: "Sports Uniform",
@@ -392,14 +392,8 @@ export default function ShopPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {displayedProducts.map((item) => (
                 <Card key={item.id} className="flex flex-col">
-                    <div className="relative aspect-square w-full">
-                    <Image
-                        src={item.imageUrl}
-                        alt={item.name}
-                        fill
-                        className="object-cover rounded-t-lg"
-                        data-ai-hint="product image"
-                    />
+                    <div className="relative aspect-square w-full bg-muted rounded-t-lg flex items-center justify-center">
+                      <ShoppingCart className="h-16 w-16 text-muted-foreground" />
                     </div>
                     <CardHeader>
                     <CardTitle>{item.name}</CardTitle>
