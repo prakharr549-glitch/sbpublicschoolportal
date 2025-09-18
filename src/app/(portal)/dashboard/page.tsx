@@ -74,9 +74,9 @@ export default function DashboardPage() {
               <h3 className="font-semibold">Announcements</h3>
               <p className="text-sm text-muted-foreground">Read the latest news.</p>
             </Link>
-            <Link href="/events" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
-              <h3 className="font-semibold">Events</h3>
-              <p className="text-sm text-muted-foreground">View the school calendar.</p>
+            <Link href="/shop" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+              <h3 className="font-semibold">Shop</h3>
+              <p className="text-sm text-muted-foreground">Buy school merchandise.</p>
             </Link>
             <Link href="/homework" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
               <h3 className="font-semibold">Homework</h3>
