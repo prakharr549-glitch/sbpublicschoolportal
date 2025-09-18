@@ -474,10 +474,7 @@ export default function ShopPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {displayedProducts.map((item) => (
                 <Card key={item.id} className="flex flex-col">
-                    <CardHeader className="flex-row gap-4 items-center">
-                        <div className="relative aspect-square w-24 bg-muted rounded-lg flex items-center justify-center">
-                            <Image src={item.imageUrl} alt={item.name} layout="fill" className="object-cover rounded-lg"/>
-                        </div>
+                    <CardHeader>
                         <div>
                             <CardTitle>{item.name}</CardTitle>
                             <CardDescription>{item.description}</CardDescription>
@@ -539,5 +536,7 @@ export default function ShopPage() {
     </div>
   );
 }
+
+    
 
     
