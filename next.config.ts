@@ -33,6 +33,12 @@ const nextConfig: NextConfig = {
         hostname: 'picsum.photo',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
