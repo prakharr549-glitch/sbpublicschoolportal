@@ -43,38 +43,40 @@ export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
         <SchoolLogo className="h-8 w-8" />
         <span className="font-headline">SB Public Portal</span>
       </Link>
-      <div className="flex flex-col gap-1 px-4">
-        {navItems.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-primary hover:bg-primary/10",
-              (pathname === href) ? "bg-primary/10 text-primary font-medium" : ""
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </Link>
-        ))}
-      </div>
-      <div className="flex flex-col gap-1 px-4">
-        <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-          User Roles
-        </h3>
-        {userRoleNavItems.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-primary hover:bg-primary/10",
-              (pathname === href) ? "bg-primary/10 text-primary font-medium" : ""
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </Link>
-        ))}
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-1 px-4">
+          {navItems.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-primary hover:bg-primary/10",
+                (pathname === href) ? "bg-primary/10 text-primary font-medium" : ""
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Link>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-col gap-1 px-4">
+          <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+            User Roles
+          </h3>
+          {userRoleNavItems.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-primary hover:bg-primary/10",
+                (pathname === href) ? "bg-primary/10 text-primary font-medium" : ""
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
     </nav>
   );
