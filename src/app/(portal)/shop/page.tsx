@@ -72,10 +72,10 @@ type Product = {
   description: string;
   price: number;
   imageUrl: string;
-  createdAt?: { seconds: number; nanoseconds: number; };
+  createdAt?: Timestamp;
 };
 
-const defaultProducts: Omit<Product, 'id'>[] = [
+const defaultProducts: Omit<Product, 'id' | 'createdAt'>[] = [
   {
     name: "Formal Uniform",
     description: "Complete formal uniform set for all grades.",
@@ -170,19 +170,24 @@ export default function ShopPage() {
   
   useEffect(() => {
     if (editingProduct) {
-      form.reset(editingProduct);
+      form.reset({
+        name: editingProduct.name,
+        description: editingProduct.description,
+        price: editingProduct.price,
+        imageUrl: editingProduct.imageUrl
+      });
     } else {
       form.reset({ name: "", description: "", price: 0, imageUrl: "" });
     }
-  }, [editingProduct, form]);
+  }, [editingProduct, form, isAddDialogOpen, isEditDialogOpen]);
 
 
   async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
 
     setUploading(true);
-    const storageRef = ref(storage, `products/${user.uid}/${Date.now()}-${file.name}`);
+    const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
 
     try {
       const snapshot = await uploadBytes(storageRef, file);
@@ -232,14 +237,14 @@ export default function ShopPage() {
   
   async function onEditSubmit(data: ProductFormValues) {
     if (!user || !editingProduct) {
-      toast({ variant: "destructive", title: "Error", description: "You must be logged in to edit a product." });
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in and editing a product." });
       return;
     }
     try {
       const productRef = doc(db, "products", editingProduct.id);
-      await updateDoc(productRef, {
-        ...data,
-      });
+      // We don't want to update the 'createdAt' field
+      const { ...updateData } = data;
+      await updateDoc(productRef, updateData);
       toast({
         title: "Product Updated",
         description: `${data.name} has been successfully updated.`,
@@ -336,6 +341,9 @@ export default function ShopPage() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Product Image</FormLabel>
+                <FormControl>
+                    <Input id="image-url-input" className="hidden" {...field} />
+                </FormControl>
                 <Card>
                   <CardContent className="p-2">
                     <div className="flex items-center gap-4">
@@ -347,14 +355,15 @@ export default function ShopPage() {
                         )}
                       </div>
                       <div className="flex flex-col gap-2">
-                         <Button type="button" asChild variant="outline" size="sm">
-                            <label htmlFor={fileInputId} className="cursor-pointer inline-flex items-center justify-center gap-2">
+                         <label htmlFor={fileInputId} className="inline-flex items-center justify-center gap-2 cursor-pointer">
+                            <Button type="button" asChild variant="outline" size="sm">
+                                <div>
                                 <Upload className="mr-2 h-4 w-4" />
                                 <span>Upload Image</span>
-                                <input id={fileInputId} name={fileInputId} type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} disabled={uploading}/>
-                            </label>
-                        </Button>
-
+                                </div>
+                            </Button>
+                         </label>
+                         <input id={fileInputId} name={fileInputId} type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} disabled={uploading}/>
                           <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
                               <DialogTrigger asChild>
                                   <Button type="button" variant="outline" size="sm">
@@ -394,7 +403,14 @@ export default function ShopPage() {
             )}
           />
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => isEditMode ? setIsEditDialogOpen(false) : setIsAddDialogOpen(false) }>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => {
+              if (isEditMode) {
+                  setIsEditDialogOpen(false);
+                  setEditingProduct(null);
+              } else {
+                  setIsAddDialogOpen(false);
+              }
+          }}>Cancel</Button>
           <Button type="submit" disabled={form.formState.isSubmitting || uploading}>
             {(form.formState.isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isEditMode ? "Save Changes" : "Add Product"}
@@ -432,7 +448,12 @@ export default function ShopPage() {
       </div>
       
       {/* Edit Product Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+              setEditingProduct(null);
+          }
+          setIsEditDialogOpen(isOpen);
+      }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
@@ -440,7 +461,7 @@ export default function ShopPage() {
               Update the product details below.
             </DialogDescription>
           </DialogHeader>
-          {renderForm(true)}
+          {editingProduct && renderForm(true)}
         </DialogContent>
       </Dialog>
 
@@ -453,19 +474,21 @@ export default function ShopPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {displayedProducts.map((item) => (
                 <Card key={item.id} className="flex flex-col">
-                    <div className="relative aspect-square w-full bg-muted rounded-t-lg flex items-center justify-center">
-                      <ShoppingCart className="h-16 w-16 text-muted-foreground" />
-                    </div>
-                    <CardHeader>
-                    <CardTitle>{item.name}</CardTitle>
-                    <CardDescription>{item.description}</CardDescription>
+                    <CardHeader className="flex-row gap-4 items-center">
+                        <div className="relative aspect-square w-24 bg-muted rounded-lg flex items-center justify-center">
+                            <Image src={item.imageUrl} alt={item.name} layout="fill" className="object-cover rounded-lg"/>
+                        </div>
+                        <div>
+                            <CardTitle>{item.name}</CardTitle>
+                            <CardDescription>{item.description}</CardDescription>
+                        </div>
                     </CardHeader>
                     <CardContent className="flex-grow">
                         <p className="text-2xl font-bold">₹{item.price.toFixed(2)}</p>
                     </CardContent>
                     <CardFooter className="flex-col items-stretch gap-2 border-t pt-4">
                     <Button className="w-full">Add to Cart</Button>
-                    {user && products.length > 0 && (
+                    {user && products.some(p => p.id === item.id) && (
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" className="w-full" onClick={() => handleEditClick(item)}>
                                 <Pencil className="mr-2 h-4 w-4" />
@@ -516,3 +539,5 @@ export default function ShopPage() {
     </div>
   );
 }
+
+    
