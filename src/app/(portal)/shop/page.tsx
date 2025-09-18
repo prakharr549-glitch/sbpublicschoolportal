@@ -294,10 +294,10 @@ export default function ShopPage() {
                                     </DialogContent>
                                     </Dialog>
                                    <Button asChild variant="outline" size="icon" className="relative">
-                                    <>
+                                    <div className="relative">
                                         <Upload className="h-4 w-4" />
                                         <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={handleImageUpload} disabled={uploading}/>
-                                    </>
+                                    </div>
                                    </Button>
                                 </div>
                                 {uploading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Uploading...</div>}
@@ -391,3 +391,5 @@ export default function ShopPage() {
     </div>
   );
 }
+
+    
