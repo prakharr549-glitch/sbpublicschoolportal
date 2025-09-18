@@ -261,56 +261,68 @@ export default function ShopPage() {
                       )}
                     />
                     <FormField
-                        control={form.control}
-                        name="imageUrl"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Product Image</FormLabel>
-                                <div className="flex items-center gap-2">
-                                  <FormControl>
-                                      <Input placeholder="Image URL" {...field} />
-                                  </FormControl>
-                                   <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button type="button" variant="outline" size="icon">
-                                            <GalleryHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-4xl">
-                                        <DialogHeader>
-                                        <DialogTitle>Select from Gallery</DialogTitle>
-                                        <DialogDescription>
-                                            Choose an image from the school's gallery.
-                                        </DialogDescription>
-                                        </DialogHeader>
-                                        <ScrollArea className="h-[60vh]">
-                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4">
-                                            {PlaceHolderImages.filter(img => img.id.startsWith('gallery-')).map(image => (
-                                                <Card key={image.id} className="cursor-pointer hover:border-primary" onClick={() => selectFromGallery(image.imageUrl)}>
-                                                    <CardContent className="p-0">
-                                                        <div className="relative aspect-square w-full">
-                                                            <Image src={image.imageUrl} alt={image.description} fill className="object-cover rounded-lg" />
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            ))}
-                                        </div>
-                                        </ScrollArea>
-                                    </DialogContent>
-                                    </Dialog>
-                                   <Button asChild variant="outline" size="icon" className="relative">
-                                    <div className="relative">
-                                        <Upload className="h-4 w-4" />
-                                        <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={handleImageUpload} disabled={uploading}/>
-                                    </div>
-                                   </Button>
+                      control={form.control}
+                      name="imageUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Product Image</FormLabel>
+                          <Card>
+                            <CardContent className="p-2">
+                              <div className="flex items-center gap-4">
+                                <div className="relative w-24 h-24 bg-muted rounded-md flex items-center justify-center">
+                                  {field.value ? (
+                                    <Image src={field.value} alt="Product image preview" layout="fill" className="object-cover rounded-md" />
+                                  ) : (
+                                    <ShoppingCart className="h-8 w-8 text-muted-foreground" />
+                                  )}
                                 </div>
-                                {uploading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Uploading...</div>}
-                                {field.value && <Image src={field.value} alt="Product image preview" width={80} height={80} className="mt-2 rounded-md object-cover" />}
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                        />
+                                <div className="flex flex-col gap-2">
+                                    <Button asChild variant="outline" size="sm" className="relative">
+                                        <div className="relative">
+                                            <Upload className="mr-2 h-4 w-4" />
+                                            <span>Upload Image</span>
+                                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={handleImageUpload} disabled={uploading}/>
+                                        </div>
+                                    </Button>
+
+                                    <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button type="button" variant="outline" size="sm">
+                                                <GalleryHorizontal className="mr-2 h-4 w-4" />
+                                                <span>Select from Gallery</span>
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-4xl">
+                                            <DialogHeader>
+                                                <DialogTitle>Select from Gallery</DialogTitle>
+                                                <DialogDescription>
+                                                    Choose an image from the school's gallery.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <ScrollArea className="h-[60vh]">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4">
+                                                {PlaceHolderImages.filter(img => img.id.startsWith('gallery-')).map(image => (
+                                                    <Card key={image.id} className="cursor-pointer hover:border-primary" onClick={() => selectFromGallery(image.imageUrl)}>
+                                                        <CardContent className="p-0">
+                                                            <div className="relative aspect-square w-full">
+                                                                <Image src={image.imageUrl} alt={image.description} fill className="object-cover rounded-lg" />
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                            </ScrollArea>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                              </div>
+                              {uploading && <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2"><Loader2 className="animate-spin h-4 w-4" /> Uploading...</div>}
+                            </CardContent>
+                          </Card>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                     <Button type="submit" disabled={form.formState.isSubmitting || uploading}>
@@ -396,5 +408,3 @@ export default function ShopPage() {
     </div>
   );
 }
-
-    
