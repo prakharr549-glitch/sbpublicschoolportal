@@ -431,12 +431,7 @@ export default function ShopPage() {
         </h1>
         {user && (
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
-            </DialogTrigger>
+            {/* The trigger button has been removed as per the user's request */}
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add New Product</DialogTitle>
