@@ -61,7 +61,7 @@ const productFormSchema = z.object({
     (a) => parseFloat(z.string().parse(a)),
     z.number().positive("Price must be a positive number.")
   ),
-  imageUrl: z.string().url("Please provide a valid image URL."),
+  imageUrl: z.string().url("Please upload or select an image."),
   createdAt: z.date().default(() => new Date()),
 });
 
@@ -197,6 +197,7 @@ export default function ShopPage() {
   }
 
   const isLoading = authLoading || isDataLoading;
+  const fileInputId = "file-upload";
 
   return (
     <div className="flex flex-col gap-6">
@@ -277,13 +278,13 @@ export default function ShopPage() {
                                   )}
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <Button asChild variant="outline" size="sm" className="relative">
-                                        <div className="relative">
-                                            <Upload className="mr-2 h-4 w-4" />
-                                            <span>Upload Image</span>
-                                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={handleImageUpload} disabled={uploading}/>
-                                        </div>
-                                    </Button>
+                                  <Button asChild variant="outline" size="sm">
+                                      <label htmlFor={fileInputId} className="cursor-pointer inline-flex items-center justify-center gap-2">
+                                          <Upload className="mr-2 h-4 w-4" />
+                                          <span>Upload Image</span>
+                                      </label>
+                                  </Button>
+                                  <input id={fileInputId} name={fileInputId} type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} disabled={uploading}/>
 
                                     <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
                                         <DialogTrigger asChild>
