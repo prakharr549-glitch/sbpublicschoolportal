@@ -1,3 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import Image from "next/image";
 import {
   Card,
@@ -8,73 +14,310 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { db, auth } from "@/lib/firebase";
+import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { Loader2, PlusCircle, Trash2, ShoppingCart } from "lucide-react";
 
-const shopItems = [
-    {
-      id: "notebook",
-      name: "School Notebook",
-      description: "A high-quality notebook with the school logo.",
-      price: "₹50",
-      imageUrl: "https://picsum.photos/seed/shop1/400/400",
-      imageHint: "notebook"
-    },
-    {
-      id: "tshirt",
-      name: "School T-Shirt",
-      description: "Comfortable cotton t-shirt with school branding.",
-      price: "₹300",
-      imageUrl: "https://picsum.photos/seed/shop2/400/400",
-      imageHint: "t-shirt"
-    },
-    {
-      id: "bag",
-      name: "School Bag",
-      description: "Durable and spacious bag for all your books.",
-      price: "₹700",
-      imageUrl: "https://picsum.photos/seed/shop3/400/400",
-      imageHint: "school bag"
-    },
-    {
-      id: "bottle",
-      name: "Water Bottle",
-      description: "Stay hydrated with this branded water bottle.",
-      price: "₹150",
-      imageUrl: "https://picsum.photos/seed/shop4/400/400",
-      imageHint: "water bottle"
-    },
-  ];
+
+const productFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  description: z.string().min(10, "Description must be at least 10 characters."),
+  price: z.preprocess(
+    (a) => parseFloat(z.string().parse(a)),
+    z.number().positive("Price must be a positive number.")
+  ),
+  imageUrl: z.string().url("Please enter a valid image URL."),
+});
+
+type ProductFormValues = z.infer<typeof productFormSchema>;
+
+type Product = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+};
 
 export default function ShopPage() {
+  const [user, authLoading] = useAuthState(auth);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const { toast } = useToast();
+
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      price: 0,
+      imageUrl: "",
+    },
+  });
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    const q = query(collection(db, "products"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const productsData: Product[] = [];
+      querySnapshot.forEach((doc) => {
+        productsData.push({ id: doc.id, ...(doc.data() as Omit<Product, 'id'>) });
+      });
+      setProducts(productsData);
+      setIsDataLoading(false);
+    }, (error) => {
+      console.error("Error fetching products:", error);
+      toast({
+        variant: "destructive",
+        title: "Permission Denied",
+        description: "You do not have permission to view products.",
+      });
+      setIsDataLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, authLoading, toast]);
+
+
+  async function onSubmit(data: ProductFormValues) {
+    if (!user) {
+      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to add a product." });
+      return;
+    }
+    try {
+      await addDoc(collection(db, "products"), data);
+      toast({
+        title: "Product Added",
+        description: `${data.name} has been added to the shop.`,
+      });
+      form.reset();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding product: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was a problem adding the product.",
+      });
+    }
+  }
+
+  async function handleDelete(productId: string) {
+    if (!user) {
+      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to delete a product." });
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, "products", productId));
+      toast({
+        title: "Product Deleted",
+        description: "The product has been successfully removed from the shop.",
+      });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast({
+        variant: "destructive",
+        title: "Deletion Failed",
+        description: "There was a problem deleting the product.",
+      });
+    }
+  }
+
+  const isLoading = authLoading || isDataLoading;
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold tracking-tight font-headline">
-        School Shop
-      </h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {shopItems.map((item) => (
-          <Card key={item.id} className="flex flex-col">
-            <div className="relative aspect-square w-full">
-              <Image
-                src={item.imageUrl}
-                alt={item.name}
-                fill
-                className="object-cover rounded-t-lg"
-                data-ai-hint={item.imageHint}
-              />
-            </div>
-            <CardHeader>
-              <CardTitle>{item.name}</CardTitle>
-              <CardDescription>{item.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow">
-                <p className="text-2xl font-bold">{item.price}</p>
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full">Add to Cart</Button>
-            </CardFooter>
-          </Card>
-        ))}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight font-headline">
+          School Shop
+        </h1>
+        {user && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add New Product</DialogTitle>
+                <DialogDescription>
+                  Fill in the details below to add a new item to the shop.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Product Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., School T-Shirt" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="e.g., Comfortable cotton t-shirt with school branding." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" placeholder="e.g., 300" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="imageUrl"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Image URL</FormLabel>
+                            <FormControl>
+                                <Input placeholder="https://..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                   </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                      {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Add Product
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
+
+        {isLoading ? (
+            <div className="flex justify-center items-center h-48">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        ) : products.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {products.map((item) => (
+                <Card key={item.id} className="flex flex-col">
+                    <div className="relative aspect-square w-full">
+                    <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        fill
+                        className="object-cover rounded-t-lg"
+                        data-ai-hint="product image"
+                    />
+                    </div>
+                    <CardHeader>
+                    <CardTitle>{item.name}</CardTitle>
+                    <CardDescription>{item.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                        <p className="text-2xl font-bold">₹{item.price.toFixed(2)}</p>
+                    </CardContent>
+                    <CardFooter className="flex-col items-stretch gap-2 border-t pt-4">
+                    <Button className="w-full">Add to Cart</Button>
+                    {user && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the product "{item.name}".
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    className="bg-destructive hover:bg-destructive/90"
+                                    onClick={() => handleDelete(item.id)}
+                                >
+                                    Continue
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                    </CardFooter>
+                </Card>
+                ))}
+            </div>
+        ) : (
+             <Card>
+                <CardContent className="py-12">
+                    <div className="text-center text-muted-foreground">
+                        <ShoppingCart className="mx-auto h-12 w-12" />
+                        <h3 className="mt-4 text-lg font-semibold">No products yet</h3>
+                        <p className="mt-2 text-sm">Products added by an administrator will appear here.</p>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
     </div>
   );
 }
