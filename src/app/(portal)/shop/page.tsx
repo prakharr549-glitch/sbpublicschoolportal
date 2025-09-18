@@ -169,14 +169,14 @@ export default function ShopPage() {
   }, [user, authLoading, toast]);
   
   useEffect(() => {
-    if (editingProduct) {
+    if (isEditDialogOpen && editingProduct) {
       form.reset({
         name: editingProduct.name,
         description: editingProduct.description,
         price: editingProduct.price,
         imageUrl: editingProduct.imageUrl
       });
-    } else {
+    } else if (isAddDialogOpen) {
       form.reset({ name: "", description: "", price: 0, imageUrl: "" });
     }
   }, [editingProduct, form, isAddDialogOpen, isEditDialogOpen]);
@@ -242,9 +242,12 @@ export default function ShopPage() {
     }
     try {
       const productRef = doc(db, "products", editingProduct.id);
-      // We don't want to update the 'createdAt' field
-      const { ...updateData } = data;
-      await updateDoc(productRef, updateData);
+      await updateDoc(productRef, {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        imageUrl: data.imageUrl,
+      });
       toast({
         title: "Product Updated",
         description: `${data.name} has been successfully updated.`,
@@ -474,14 +477,13 @@ export default function ShopPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {displayedProducts.map((item) => (
                 <Card key={item.id} className="flex flex-col">
-                    <CardHeader>
-                        <div>
-                            <CardTitle>{item.name}</CardTitle>
-                            <CardDescription>{item.description}</CardDescription>
-                        </div>
+                    <CardHeader className="flex-row items-center justify-center pt-6">
+                        <ShoppingCart className="h-10 w-10 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent className="flex-grow">
-                        <p className="text-2xl font-bold">₹{item.price.toFixed(2)}</p>
+                    <CardContent className="flex-grow space-y-2">
+                         <CardTitle className="text-center">{item.name}</CardTitle>
+                         <CardDescription className="text-center">{item.description}</CardDescription>
+                         <p className="text-2xl font-bold text-center">₹{item.price.toFixed(2)}</p>
                     </CardContent>
                     <CardFooter className="flex-col items-stretch gap-2 border-t pt-4">
                     <Button className="w-full">Add to Cart</Button>
@@ -536,7 +538,3 @@ export default function ShopPage() {
     </div>
   );
 }
-
-    
-
-    
