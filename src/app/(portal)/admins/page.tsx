@@ -15,6 +15,25 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -39,12 +58,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Phone } from "lucide-react";
+import { Loader2, PlusCircle, Phone, MoreHorizontal, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
-import { addDoc, collection, onSnapshot, query } from "firebase/firestore";
+import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
-import Link from "next/link";
 
 const adminRoles = [
   "Principal",
@@ -144,6 +162,32 @@ export default function AdminsPage() {
     }
   }
 
+  async function handleDelete(adminId: string) {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to perform this action.",
+      });
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, "admins", adminId));
+      toast({
+        title: "Admin Deleted",
+        description: "The administrator has been successfully removed.",
+      });
+    } catch (error) {
+      console.error("Error deleting admin:", error);
+      toast({
+        variant: "destructive",
+        title: "Deletion Failed",
+        description: "There was a problem deleting the administrator.",
+      });
+    }
+  }
+
+
   const isLoading = authLoading || isDataLoading;
 
   return (
@@ -152,83 +196,85 @@ export default function AdminsPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">
           Admin Management
         </h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add New Admin
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add New Admin</DialogTitle>
-              <DialogDescription>
-                Fill in the details below to add a new administrator.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., John Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+        {user && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Admin
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                <DialogTitle>Add New Admin</DialogTitle>
+                <DialogDescription>
+                    Fill in the details below to add a new administrator.
+                </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                    <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Full Name</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
+                            <Input placeholder="e.g., John Doe" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          {adminRoles.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="mobile"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mobile Number</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="e.g., 9876543210" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Admin
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {adminRoles.map((role) => (
+                                <SelectItem key={role} value={role}>
+                                {role}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="mobile"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Mobile Number</FormLabel>
+                        <FormControl>
+                            <Input type="tel" placeholder="e.g., 9876543210" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Admin
+                    </Button>
+                    </DialogFooter>
+                </form>
+                </Form>
+            </DialogContent>
+            </Dialog>
+        )}
       </div>
 
       <Card>
@@ -258,20 +304,55 @@ export default function AdminsPage() {
                       <TableCell>{admin.role}</TableCell>
                       <TableCell>{admin.mobile}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                            <Button asChild variant="outline" size="icon">
+                      <AlertDialog>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
                                 <a href={`tel:${admin.mobile}`}>
-                                    <Phone className="h-4 w-4" />
-                                    <span className="sr-only">Call</span>
+                                    <Phone className="mr-2 h-4 w-4" />
+                                    <span>Call</span>
                                 </a>
-                            </Button>
-                            <Button asChild variant="outline" size="icon">
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
                                 <a href={`https://wa.me/${admin.mobile}`} target="_blank" rel="noopener noreferrer">
-                                    <WhatsAppIcon className="h-4 w-4" />
-                                    <span className="sr-only">Message on WhatsApp</span>
+                                <WhatsAppIcon className="mr-2 h-4 w-4" />
+                                <span>WhatsApp</span>
                                 </a>
-                            </Button>
-                        </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the admin account for {admin.name}.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                className="bg-destructive hover:bg-destructive/90"
+                                onClick={() => handleDelete(admin.id)}
+                            >
+                                Continue
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                        </AlertDialog>
                       </TableCell>
                     </TableRow>
                   ))
