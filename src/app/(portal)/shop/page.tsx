@@ -46,10 +46,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
-import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit } from "firebase/firestore";
+import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Loader2, PlusCircle, Trash2, ShoppingCart, Upload, GalleryHorizontal } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, ShoppingCart, Upload, GalleryHorizontal, Pencil } from "lucide-react";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -124,7 +124,9 @@ const defaultProducts: Omit<Product, 'id'>[] = [
 export default function ShopPage() {
   const [user, authLoading] = useAuthState(auth);
   const [products, setProducts] = useState<Product[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -165,6 +167,14 @@ export default function ShopPage() {
 
     return () => unsubscribe();
   }, [user, authLoading, toast]);
+  
+  useEffect(() => {
+    if (editingProduct) {
+      form.reset(editingProduct);
+    } else {
+      form.reset({ name: "", description: "", price: 0, imageUrl: "" });
+    }
+  }, [editingProduct, form]);
 
 
   async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -194,7 +204,7 @@ export default function ShopPage() {
   }
 
 
-  async function onSubmit(data: ProductFormValues) {
+  async function onAddSubmit(data: ProductFormValues) {
     if (!user) {
       toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to add a product." });
       return;
@@ -202,14 +212,14 @@ export default function ShopPage() {
     try {
       await addDoc(collection(db, "products"), {
         ...data,
-        createdAt: new Date(),
+        createdAt: Timestamp.now(),
       });
       toast({
         title: "Product Added",
         description: `${data.name} has been added to the shop.`,
       });
       form.reset();
-      setIsDialogOpen(false);
+      setIsAddDialogOpen(false);
     } catch (error) {
       console.error("Error adding product: ", error);
       toast({
@@ -219,6 +229,33 @@ export default function ShopPage() {
       });
     }
   }
+  
+  async function onEditSubmit(data: ProductFormValues) {
+    if (!user || !editingProduct) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to edit a product." });
+      return;
+    }
+    try {
+      const productRef = doc(db, "products", editingProduct.id);
+      await updateDoc(productRef, {
+        ...data,
+      });
+      toast({
+        title: "Product Updated",
+        description: `${data.name} has been successfully updated.`,
+      });
+      setIsEditDialogOpen(false);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error("Error updating product: ", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "There was a problem updating the product.",
+      });
+    }
+  }
+
 
   async function handleDelete(productId: string) {
     if (!user) {
@@ -240,10 +277,132 @@ export default function ShopPage() {
       });
     }
   }
+  
+  const handleEditClick = (product: Product) => {
+    setEditingProduct(product);
+    setIsEditDialogOpen(true);
+  };
+
 
   const isLoading = authLoading || isDataLoading;
   const fileInputId = "file-upload";
   const displayedProducts = products.length > 0 ? products : defaultProducts.map((p, i) => ({...p, id: `default-${i}`}));
+  
+  const renderForm = (isEditMode: boolean) => (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(isEditMode ? onEditSubmit : onAddSubmit)} className="space-y-4 py-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Product Name</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., School T-Shirt" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+         <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea placeholder="e.g., Comfortable cotton t-shirt with school branding." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+          <FormField
+            control={form.control}
+            name="price"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Price (in Rupees)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" placeholder="e.g., 300" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="imageUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Product Image</FormLabel>
+                <Card>
+                  <CardContent className="p-2">
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-24 h-24 bg-muted rounded-md flex items-center justify-center">
+                        {form.watch("imageUrl") ? (
+                          <Image src={form.watch("imageUrl")} alt="Product image preview" layout="fill" className="object-cover rounded-md" />
+                        ) : (
+                          <ShoppingCart className="h-8 w-8 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                         <Button type="button" asChild variant="outline" size="sm">
+                            <label htmlFor={fileInputId} className="cursor-pointer inline-flex items-center justify-center gap-2">
+                                <Upload className="mr-2 h-4 w-4" />
+                                <span>Upload Image</span>
+                                <input id={fileInputId} name={fileInputId} type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} disabled={uploading}/>
+                            </label>
+                        </Button>
+
+                          <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
+                              <DialogTrigger asChild>
+                                  <Button type="button" variant="outline" size="sm">
+                                      <GalleryHorizontal className="mr-2 h-4 w-4" />
+                                      <span>Select from Gallery</span>
+                                  </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl">
+                                  <DialogHeader>
+                                      <DialogTitle>Select from Gallery</DialogTitle>
+                                      <DialogDescription>
+                                          Choose an image from the school's gallery.
+                                      </DialogDescription>
+                                  </DialogHeader>
+                                  <ScrollArea className="h-[60vh]">
+                                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4">
+                                      {PlaceHolderImages.filter(img => img.id.startsWith('gallery-')).map(image => (
+                                          <Card key={image.id} className="cursor-pointer hover:border-primary" onClick={() => selectFromGallery(image.imageUrl)}>
+                                              <CardContent className="p-0">
+                                                  <div className="relative aspect-square w-full">
+                                                      <Image src={image.imageUrl} alt={image.description} fill className="object-cover rounded-lg" />
+                                                  </div>
+                                              </CardContent>
+                                          </Card>
+                                      ))}
+                                  </div>
+                                  </ScrollArea>
+                              </DialogContent>
+                          </Dialog>
+                      </div>
+                    </div>
+                    {uploading && <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2"><Loader2 className="animate-spin h-4 w-4" /> Uploading...</div>}
+                  </CardContent>
+                </Card>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => isEditMode ? setIsEditDialogOpen(false) : setIsAddDialogOpen(false) }>Cancel</Button>
+          <Button type="submit" disabled={form.formState.isSubmitting || uploading}>
+            {(form.formState.isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditMode ? "Save Changes" : "Add Product"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -252,7 +411,7 @@ export default function ShopPage() {
           School Shop
         </h1>
         {user && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -266,123 +425,25 @@ export default function ShopPage() {
                   Fill in the details below to add a new item to the shop.
                 </DialogDescription>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Product Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., School T-Shirt" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="e.g., Comfortable cotton t-shirt with school branding." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                    <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Price</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" placeholder="e.g., 300" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="imageUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Product Image</FormLabel>
-                          <Card>
-                            <CardContent className="p-2">
-                              <div className="flex items-center gap-4">
-                                <div className="relative w-24 h-24 bg-muted rounded-md flex items-center justify-center">
-                                  {field.value ? (
-                                    <Image src={field.value} alt="Product image preview" layout="fill" className="object-cover rounded-md" />
-                                  ) : (
-                                    <ShoppingCart className="h-8 w-8 text-muted-foreground" />
-                                  )}
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                   <Button type="button" asChild variant="outline" size="sm">
-                                      <label htmlFor={fileInputId} className="cursor-pointer inline-flex items-center justify-center gap-2">
-                                          <Upload className="mr-2 h-4 w-4" />
-                                          <span>Upload Image</span>
-                                          <input id={fileInputId} name={fileInputId} type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} disabled={uploading}/>
-                                      </label>
-                                  </Button>
-
-                                    <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button type="button" variant="outline" size="sm">
-                                                <GalleryHorizontal className="mr-2 h-4 w-4" />
-                                                <span>Select from Gallery</span>
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-4xl">
-                                            <DialogHeader>
-                                                <DialogTitle>Select from Gallery</DialogTitle>
-                                                <DialogDescription>
-                                                    Choose an image from the school's gallery.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <ScrollArea className="h-[60vh]">
-                                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4">
-                                                {PlaceHolderImages.filter(img => img.id.startsWith('gallery-')).map(image => (
-                                                    <Card key={image.id} className="cursor-pointer hover:border-primary" onClick={() => selectFromGallery(image.imageUrl)}>
-                                                        <CardContent className="p-0">
-                                                            <div className="relative aspect-square w-full">
-                                                                <Image src={image.imageUrl} alt={image.description} fill className="object-cover rounded-lg" />
-                                                            </div>
-                                                        </CardContent>
-                                                    </Card>
-                                                ))}
-                                            </div>
-                                            </ScrollArea>
-                                        </DialogContent>
-                                    </Dialog>
-                                </div>
-                              </div>
-                              {uploading && <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2"><Loader2 className="animate-spin h-4 w-4" /> Uploading...</div>}
-                            </CardContent>
-                          </Card>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={form.formState.isSubmitting || uploading}>
-                      {(form.formState.isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Add Product
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
+              {renderForm(false)}
             </DialogContent>
           </Dialog>
         )}
       </div>
+      
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>
+              Update the product details below.
+            </DialogDescription>
+          </DialogHeader>
+          {renderForm(true)}
+        </DialogContent>
+      </Dialog>
+
 
         {isLoading ? (
             <div className="flex justify-center items-center h-48">
@@ -405,31 +466,37 @@ export default function ShopPage() {
                     <CardFooter className="flex-col items-stretch gap-2 border-t pt-4">
                     <Button className="w-full">Add to Cart</Button>
                     {user && products.length > 0 && (
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the product "{item.name}".
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                    className="bg-destructive hover:bg-destructive/90"
-                                    onClick={() => handleDelete(item.id)}
-                                >
-                                    Continue
-                                </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="w-full" onClick={() => handleEditClick(item)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm" className="w-full">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the product "{item.name}".
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        className="bg-destructive hover:bg-destructive/90"
+                                        onClick={() => handleDelete(item.id)}
+                                    >
+                                        Continue
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
                     )}
                     </CardFooter>
                 </Card>
