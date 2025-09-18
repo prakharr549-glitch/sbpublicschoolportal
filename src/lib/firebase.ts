@@ -1,11 +1,12 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   projectId: "studio-4606164625-37d65",
   appId: "1:422281319062:web:9a3233c70751ce27b9a8b7",
-  storageBucket: "studio-4606164625-37d65.firebasestorage.app",
+  storageBucket: "studio-4606164625-37d65.appspot.com",
   apiKey: "AIzaSyDF9s8FC9dik7MyJE0QbJNgYCzmRjCPkSs",
   authDomain: "studio-4606164625-37d65.firebaseapp.com",
   measurementId: "",
@@ -16,5 +17,6 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-export { app, auth, db };
+export { app, auth, db, storage };

@@ -47,8 +47,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Loader2, PlusCircle, Trash2, ShoppingCart } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, ShoppingCart, Upload, GalleryHorizontal } from "lucide-react";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 const productFormSchema = z.object({
@@ -58,7 +61,7 @@ const productFormSchema = z.object({
     (a) => parseFloat(z.string().parse(a)),
     z.number().positive("Price must be a positive number.")
   ),
-  imageUrl: z.string().url("Please enter a valid image URL."),
+  imageUrl: z.string().url("Please provide a valid image URL."),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -76,7 +79,11 @@ export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   const { toast } = useToast();
+  const storage = getStorage();
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -111,6 +118,33 @@ export default function ShopPage() {
 
     return () => unsubscribe();
   }, [user, authLoading, toast]);
+
+
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploading(true);
+    const storageRef = ref(storage, `products/${user.uid}/${Date.now()}-${file.name}`);
+
+    try {
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      form.setValue("imageUrl", downloadURL, { shouldValidate: true });
+      toast({ title: "Image Uploaded", description: "Your image has been uploaded successfully." });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast({ variant: "destructive", title: "Upload Failed", description: "There was a problem uploading your image." });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function selectFromGallery(imageUrl: string) {
+    form.setValue("imageUrl", imageUrl, { shouldValidate: true });
+    setIsGalleryOpen(false);
+    toast({ title: "Image Selected", description: "Image from gallery has been selected." });
+  }
 
 
   async function onSubmit(data: ProductFormValues) {
@@ -208,7 +242,6 @@ export default function ShopPage() {
                       </FormItem>
                     )}
                   />
-                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="price"
@@ -222,24 +255,61 @@ export default function ShopPage() {
                         </FormItem>
                       )}
                     />
-                     <FormField
+                    <FormField
                         control={form.control}
                         name="imageUrl"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Image URL</FormLabel>
-                            <FormControl>
-                                <Input placeholder="https://..." {...field} />
-                            </FormControl>
-                            <FormMessage />
+                                <FormLabel>Product Image</FormLabel>
+                                <div className="flex items-center gap-2">
+                                  <FormControl>
+                                      <Input placeholder="Image URL" {...field} />
+                                  </FormControl>
+                                   <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button type="button" variant="outline" size="icon">
+                                            <GalleryHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-4xl">
+                                        <DialogHeader>
+                                        <DialogTitle>Select from Gallery</DialogTitle>
+                                        <DialogDescription>
+                                            Choose an image from the school's gallery.
+                                        </DialogDescription>
+                                        </DialogHeader>
+                                        <ScrollArea className="h-[60vh]">
+                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4">
+                                            {PlaceHolderImages.filter(img => img.id.startsWith('gallery-')).map(image => (
+                                                <Card key={image.id} className="cursor-pointer hover:border-primary" onClick={() => selectFromGallery(image.imageUrl)}>
+                                                    <CardContent className="p-0">
+                                                        <div className="relative aspect-square w-full">
+                                                            <Image src={image.imageUrl} alt={image.description} fill className="object-cover rounded-lg" />
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                        </ScrollArea>
+                                    </DialogContent>
+                                    </Dialog>
+                                   <Button asChild variant="outline" size="icon" className="relative">
+                                    <>
+                                        <Upload className="h-4 w-4" />
+                                        <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={handleImageUpload} disabled={uploading}/>
+                                    </>
+                                   </Button>
+                                </div>
+                                {uploading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Uploading...</div>}
+                                {field.value && <Image src={field.value} alt="Product image preview" width={80} height={80} className="mt-2 rounded-md object-cover" />}
+                                <FormMessage />
                             </FormItem>
                         )}
                         />
-                   </div>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={form.formState.isSubmitting}>
-                      {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button type="submit" disabled={form.formState.isSubmitting || uploading}>
+                      {(form.formState.isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Add Product
                     </Button>
                   </DialogFooter>
