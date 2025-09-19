@@ -496,7 +496,7 @@ export default function ShopPage() {
                     <CardContent className="flex-grow space-y-2 pt-4">
                         <div className="flex justify-between items-start">
                             <CardTitle className="font-headline">{item.name}</CardTitle>
-                            {user && products.some(p => p.id === item.id) && (
+                            {user && (
                                 <AlertDialog>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -513,7 +513,7 @@ export default function ShopPage() {
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <AlertDialogTrigger asChild>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={item.id.startsWith('default-')} >
                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                 <span>Delete</span>
                                             </DropdownMenuItem>
