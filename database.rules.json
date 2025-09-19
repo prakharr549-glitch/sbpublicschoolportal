@@ -1,0 +1,43 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "chats": {
+      "$chatId": {
+        // Chat metadata can be read or written only by its members
+        ".read": "data.child('members').child(auth.uid).exists()",
+        ".write": "data.child('members').child(auth.uid).exists() || (!data.exists() && newData.child('members').child(auth.uid).exists())",
+
+        "messages": {
+          "$messageId": {
+            // Messages can be read or written only by chat members
+            ".read": "root.child('chats/' + $chatId + '/members/' + auth.uid).exists()",
+            ".write": "root.child('chats/' + $chatId + '/members/' + auth.uid).exists()",
+            
+            "text": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "senderId": {
+              ".validate": "newData.val() === auth.uid"
+            },
+            "timestamp": {
+               ".validate": "newData.val() <= now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "members": {
+            // Validation to ensure members are added correctly
+           "$uid": {
+             ".validate": "newData.isBoolean() && newData.val() === true"
+           }
+        },
+         "$other": {
+            ".validate": false
+        }
+      }
+    }
+  }
+}
