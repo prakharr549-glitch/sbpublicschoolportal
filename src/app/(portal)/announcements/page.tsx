@@ -52,11 +52,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, PlusCircle, Megaphone, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, Megaphone, Trash2, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, orderBy, Timestamp, doc, deleteDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { Label } from "@/components/ui/label";
 
 const announcementCategories = ["Event", "Academic", "General"] as const;
 
@@ -84,6 +85,11 @@ export default function AnnouncementsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const { toast } = useToast();
+
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
 
   const form = useForm<AnnouncementFormValues>({
     resolver: zodResolver(announcementFormSchema),
@@ -116,6 +122,25 @@ export default function AnnouncementsPage() {
 
     return () => unsubscribe();
   }, [user, authLoading, toast]);
+
+  const handlePasswordVerification = () => {
+    if (passwordInput === '6395') {
+      if (protectedAction) {
+        protectedAction();
+      }
+      setIsPasswordDialogOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      setProtectedAction(null);
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+  
+  const requestPassword = (action: () => void) => {
+    setProtectedAction(() => action);
+    setIsPasswordDialogOpen(true);
+  }
 
   async function onSubmit(data: AnnouncementFormValues) {
     if (!user) {
@@ -184,89 +209,128 @@ export default function AnnouncementsPage() {
             </h1>
         </div>
         {user && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Announcement
-              </Button>
-            </DialogTrigger>
+            <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Announcement
+            </Button>
+        )}
+      </div>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
+                <DialogHeader>
                 <DialogTitle>Add New Announcement</DialogTitle>
                 <DialogDescription>
-                  Fill in the details below to post a new announcement.
+                    Fill in the details below to post a new announcement.
                 </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
+                </DialogHeader>
+                <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                  <FormField
+                    <FormField
                     control={form.control}
                     name="title"
                     render={({ field }) => (
-                      <FormItem>
+                        <FormItem>
                         <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g., Annual Sports Day" {...field} />
+                            <Input placeholder="e.g., Annual Sports Day" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>
+                        </FormItem>
                     )}
-                  />
-                  <FormField
+                    />
+                    <FormField
                     control={form.control}
                     name="category"
                     render={({ field }) => (
-                      <FormItem>
+                        <FormItem>
                         <FormLabel>Category</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
+                            <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
+                                <SelectValue placeholder="Select a category" />
                             </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
+                            </FormControl>
+                            <SelectContent>
                             {announcementCategories.map((category) => (
-                              <SelectItem key={category} value={category}>
+                                <SelectItem key={category} value={category}>
                                 {category}
-                              </SelectItem>
+                                </SelectItem>
                             ))}
-                          </SelectContent>
+                            </SelectContent>
                         </Select>
                         <FormMessage />
-                      </FormItem>
+                        </FormItem>
                     )}
-                  />
-                  <FormField
+                    />
+                    <FormField
                     control={form.control}
                     name="content"
                     render={({ field }) => (
-                      <FormItem>
+                        <FormItem>
                         <FormLabel>Content</FormLabel>
                         <FormControl>
-                          <Textarea
+                            <Textarea
                             placeholder="Provide the full details of the announcement."
                             className="resize-none"
                             {...field}
-                          />
+                            />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>
+                        </FormItem>
                     )}
-                  />
-                  <DialogFooter>
+                    />
+                    <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                     <Button type="submit" disabled={form.formState.isSubmitting}>
-                      {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Post Announcement
+                        {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Post Announcement
                     </Button>
-                  </DialogFooter>
+                    </DialogFooter>
                 </form>
-              </Form>
+                </Form>
             </DialogContent>
-          </Dialog>
-        )}
-      </div>
+        </Dialog>
+
+        <Dialog open={isPasswordDialogOpen} onOpenChange={(isOpen) => {
+            if (!isOpen) {
+                setPasswordInput('');
+                setPasswordError('');
+                setProtectedAction(null);
+            }
+            setIsPasswordDialogOpen(isOpen);
+        }}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Admin Access Required</DialogTitle>
+                <DialogDescription>
+                    Please enter the administrator password to continue.
+                </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                <div className="space-y-4 py-2 pb-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit">
+                        <Lock className="mr-2 h-4 w-4"/>
+                        Verify
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-col gap-4">
         {isLoading ? (
@@ -309,7 +373,9 @@ export default function AnnouncementsPage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(announcement.id)}>
+                          <AlertDialogAction 
+                            className="bg-destructive hover:bg-destructive/90"
+                            onClick={() => requestPassword(() => handleDelete(announcement.id))}>
                             Continue
                           </AlertDialogAction>
                         </AlertDialogFooter>
