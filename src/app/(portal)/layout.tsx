@@ -30,8 +30,6 @@ export default function PortalLayout({
   }
 
   if (!user) {
-    // This will be briefly rendered before the redirect happens, 
-    // or you can return null to avoid a flash of unstyled content.
     return null; 
   }
 

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { SchoolLogo } from "@/components/icons";
 
 const navItems = [
-  { href: "/admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
@@ -22,7 +22,7 @@ export function AdminNav({ className }: React.HTMLAttributes<HTMLElement>) {
 
   return (
     <nav className={cn("flex flex-col gap-4", className)}>
-      <Link href="/admin-dashboard" className="flex items-center gap-2 px-4 text-lg font-bold text-primary">
+      <Link href="/admin" className="flex items-center gap-2 px-4 text-lg font-bold text-primary">
         <SchoolLogo className="h-8 w-8" />
         <span className="font-headline">Admin Portal</span>
       </Link>

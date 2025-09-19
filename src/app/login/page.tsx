@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
+    // If auth state is resolved and we have a user, redirect to profile
     if (!loading && user) {
       router.push("/profile");
     }
@@ -31,10 +32,12 @@ export default function LoginPage() {
       if (error.code !== 'auth/popup-closed-by-user') {
         console.error("Error signing in with Google", error);
       }
-      setIsSigningIn(false); // Reset on error or cancellation
+    } finally {
+        setIsSigningIn(false);
     }
   };
 
+  // While loading, or if user is found (and redirect is imminent), show a loader.
   if (loading || user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -43,6 +46,7 @@ export default function LoginPage() {
     );
   }
 
+  // Only show the login page if loading is false and there is no user
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm rounded-lg border bg-card p-8 shadow-sm">
