@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Bot, FileText, Map, FlaskConical, Computer, Presentation, Camera, Dribbble, Shuttlecock, Users } from "lucide-react";
+import { Bot, FileText, Map, FlaskConical, Computer, Presentation, Camera, Dribbble, Users } from "lucide-react";
 import Link from 'next/link';
 
 const overviewItems = [
@@ -32,6 +32,12 @@ const overviewItems = [
     description: "Find the quickest route to our campus."
   },
 ];
+
+const Shuttlecock = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M10 17.5a1.5 1.5 0 0 1-3 0V3c0-1.1.9-2 2-2s2 .9 2 2v14.5Z"/><path d="M10 9H7"/><path d="m17 8-4 4-4-4"/><path d="m17 14-4-4-4 4"/><path d="m17 2-4 4-4-4"/>
+    </svg>
+)
 
 const facilityItems = [
     { name: "Science Lab", icon: FlaskConical },
