@@ -11,13 +11,15 @@ import { z } from 'zod';
 import { getFirestore, Query } from 'firebase-admin/firestore';
 import { initializeApp, getApps, App } from 'firebase-admin/app';
 
-// Helper function to initialize Firebase Admin if not already done
-function ensureFirebaseAdmin() {
-  if (getApps().length > 0) {
-    return getApps()[0];
-  }
-  return initializeApp();
+// Ensure Firebase Admin is initialized
+let adminApp: App;
+if (!getApps().length) {
+  adminApp = initializeApp();
+} else {
+  adminApp = getApps()[0];
 }
+const db = getFirestore(adminApp);
+
 
 const DeleteChatInputSchema = z.string().describe("The ID of the chat to delete.");
 export type DeleteChatInput = z.infer<typeof DeleteChatInputSchema>;
@@ -57,9 +59,6 @@ const deleteChatFlow = ai.defineFlow(
       throw new Error("Chat ID is required.");
     }
     
-    const adminApp = ensureFirebaseAdmin();
-    const db = getFirestore(adminApp);
-
     try {
       const messagesPath = `chats/${chatId}/messages`;
       await deleteCollection(db, messagesPath, 50);
