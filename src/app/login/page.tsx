@@ -274,7 +274,7 @@ export default function LoginPage() {
                     <Separator className="flex-1" />
                   </div>
                   <p>If you don't have an access code, apply for one:</p>
-                  <Button variant="outline" className="w-full" asChild>
+                  <Button asChild className="w-full bg-green-200 text-green-800 hover:bg-green-300">
                      <Link href="/admission-form">
                         Submit Admission Form
                     </Link>
