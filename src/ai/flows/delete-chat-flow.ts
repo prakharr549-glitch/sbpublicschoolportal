@@ -8,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Query } from 'firebase-admin/firestore';
 import { initializeApp, getApps, App } from 'firebase-admin/app';
 
 // Ensure Firebase Admin is initialized
@@ -29,38 +29,24 @@ export async function deleteChat(chatId: DeleteChatInput): Promise<void> {
 }
 
 // Helper function to delete a collection in batches
-async function deleteCollection(collectionPath: string, batchSize: number) {
+async function deleteCollection(collectionPath: string, batchSize: number): Promise<void> {
   const collectionRef = db.collection(collectionPath);
-  const query = collectionRef.orderBy('__name__').limit(batchSize);
+  let query: Query = collectionRef.orderBy('__name__').limit(batchSize);
 
-  return new Promise((resolve, reject) => {
-    deleteQueryBatch(query, resolve).catch(reject);
-  });
-}
+  while (true) {
+    const snapshot = await query.get();
+    if (snapshot.size === 0) {
+      break;
+    }
 
-async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (value: unknown) => void) {
-  const snapshot = await query.get();
-
-  const batchSize = snapshot.size;
-  if (batchSize === 0) {
-    // When there are no documents left, we are done
-    resolve(0);
-    return;
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
   }
-
-  // Delete documents in a batch
-  const batch = db.batch();
-  snapshot.docs.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
-  await batch.commit();
-
-  // Recurse on the next process tick, to avoid
-  // exploding the stack.
-  process.nextTick(() => {
-    deleteQueryBatch(query, resolve);
-  });
 }
+
 
 const deleteChatFlow = ai.defineFlow(
   {
@@ -86,5 +72,3 @@ const deleteChatFlow = ai.defineFlow(
     }
   }
 );
-
-    
