@@ -441,7 +441,7 @@ export default function ShopPage() {
                     </CardHeader>
                     <CardContent className="flex-grow space-y-2 pt-0">
                          <CardDescription>{item.description}</CardDescription>
-                         <p className="text-2xl font-bold">₹{item.price.toFixed(2)}</p>
+                         <p className="text-2xl font-bold">INR {item.price.toFixed(2)}</p>
                     </CardContent>
                     <CardFooter>
                          <Button className="w-full">Add to Cart</Button>
@@ -463,5 +463,3 @@ export default function ShopPage() {
     </div>
   );
 }
-
-    
