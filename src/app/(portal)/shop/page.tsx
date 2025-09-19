@@ -53,7 +53,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
-import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp } from "firebase/firestore";
+import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp, setDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal } from "lucide-react";
 
@@ -207,24 +207,41 @@ export default function ShopPage() {
       return;
     }
     try {
-      const productRef = doc(db, "products", editingProduct.id);
-      await updateDoc(productRef, {
+      const isDefaultProduct = editingProduct.id.startsWith('default-');
+      const productData = {
         name: data.name,
         description: data.description,
         price: data.price,
-      });
-      toast({
-        title: "Product Updated",
-        description: `${data.name} has been successfully updated.`,
-      });
+      };
+
+      if (isDefaultProduct) {
+        // This is a default product, so create a new document in Firestore
+        await addDoc(collection(db, "products"), {
+          ...productData,
+          createdAt: Timestamp.now(),
+        });
+         toast({
+          title: "Product Created",
+          description: `${data.name} has been added to the shop.`,
+        });
+      } else {
+        // This is an existing product, so update it
+        const productRef = doc(db, "products", editingProduct.id);
+        await updateDoc(productRef, productData);
+        toast({
+          title: "Product Updated",
+          description: `${data.name} has been successfully updated.`,
+        });
+      }
+
       setIsEditDialogOpen(false);
       setEditingProduct(null);
     } catch (error) {
-      console.error("Error updating product: ", error);
+      console.error("Error saving product: ", error);
       toast({
         variant: "destructive",
-        title: "Update Failed",
-        description: "There was a problem updating the product.",
+        title: "Save Failed",
+        description: "There was a problem saving the product.",
       });
     }
   }
@@ -328,6 +345,18 @@ export default function ShopPage() {
         </h1>
       </div>
       
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+            <DialogDescription>
+              Fill in the product details below.
+            </DialogDescription>
+          </DialogHeader>
+          {renderForm(false)}
+        </DialogContent>
+      </Dialog>
+      
       <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
           if (!isOpen) {
               setEditingProduct(null);
@@ -357,7 +386,7 @@ export default function ShopPage() {
                     <CardHeader>
                         <div className="flex justify-between items-start">
                             <CardTitle className="font-headline">{item.name}</CardTitle>
-                            {user && (
+                             {user && (
                                 <AlertDialog>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
