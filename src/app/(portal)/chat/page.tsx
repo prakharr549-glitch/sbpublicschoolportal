@@ -125,7 +125,7 @@ export default function ChatListPage() {
   };
   
   const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -174,7 +174,7 @@ export default function ChatListPage() {
                       <div className="flex items-center gap-4">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={user.photoURL} alt={user.name} />
-                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                          <AvatarFallback>{user.name?.charAt(0) ?? 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <p className="font-semibold">{user.name}</p>
