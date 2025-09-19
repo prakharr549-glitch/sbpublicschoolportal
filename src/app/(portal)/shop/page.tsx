@@ -1,10 +1,10 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -55,12 +55,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Loader2, PlusCircle, Trash2, ShoppingCart, Upload, GalleryHorizontal, Pencil, MoreHorizontal } from "lucide-react";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal } from "lucide-react";
 
 const productFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -69,7 +65,6 @@ const productFormSchema = z.object({
     (a) => parseFloat(z.string().parse(a)),
     z.number().positive("Price must be a positive number.")
   ),
-  imageUrl: z.string().url("Please upload or select an image."),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -79,7 +74,6 @@ type Product = {
   name: string;
   description: string;
   price: number;
-  imageUrl: string;
   createdAt?: Timestamp;
 };
 
@@ -88,43 +82,36 @@ const defaultProducts: Omit<Product, 'id' | 'createdAt'>[] = [
     name: "Formal Uniform",
     description: "Complete formal uniform set for all grades.",
     price: 1500,
-    imageUrl: PlaceHolderImages.find(p => p.id === 'product-formal-uniform')?.imageUrl || "https://storage.googleapis.com/studio-assets/studio-images/product-formal-uniform.jpg"
   },
   {
     name: "Sports Uniform",
     description: "Comfortable sports uniform for physical activities.",
     price: 800,
-    imageUrl: PlaceHolderImages.find(p => p.id === 'product-sports-uniform')?.imageUrl || "https://picsum.photos/seed/11/400/400"
   },
   {
     name: "School Tie",
     description: "Official school tie, a part of the formal uniform.",
     price: 250,
-    imageUrl: PlaceHolderImages.find(p => p.id === 'product-tie')?.imageUrl || "https://picsum.photos/seed/12/400/400"
   },
   {
     name: "School Belt",
     description: "Durable school belt with the official school logo.",
     price: 200,
-    imageUrl: PlaceHolderImages.find(p => p.id === 'product-belt')?.imageUrl || "https://picsum.photos/seed/13/400/400"
   },
   {
     name: "School Diary",
     description: "Student diary for the current academic session.",
     price: 150,
-    imageUrl: PlaceHolderImages.find(p => p.id === 'product-diary')?.imageUrl || "https://picsum.photos/seed/14/400/400"
   },
   {
     name: "School Bag",
     description: "Sturdy and spacious backpack with school branding.",
     price: 900,
-    imageUrl: PlaceHolderImages.find(p => p.id === 'product-bag')?.imageUrl || "https://picsum.photos/seed/15/400/400"
   },
   {
     name: "Notebooks Set",
     description: "A set of 6 notebooks for all subjects.",
     price: 300,
-    imageUrl: PlaceHolderImages.find(p => p.id === 'product-notebooks')?.imageUrl || "https://picsum.photos/seed/16/400/400"
   }
 ];
 
@@ -136,11 +123,8 @@ export default function ShopPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
   const { toast } = useToast();
-  const storage = getStorage();
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -148,7 +132,6 @@ export default function ShopPage() {
       name: "",
       description: "",
       price: 0,
-      imageUrl: "",
     },
   });
 
@@ -178,7 +161,7 @@ export default function ShopPage() {
   
   useEffect(() => {
     if (isAddDialogOpen) {
-      form.reset({ name: "", description: "", price: 0, imageUrl: "" });
+      form.reset({ name: "", description: "", price: 0 });
     }
   }, [isAddDialogOpen, form]);
 
@@ -189,37 +172,10 @@ export default function ShopPage() {
         name: editingProduct.name,
         description: editingProduct.description,
         price: editingProduct.price,
-        imageUrl: editingProduct.imageUrl
       });
     }
   }, [editingProduct, form, isEditDialogOpen]);
 
-
-  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
-
-    try {
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      form.setValue("imageUrl", downloadURL, { shouldValidate: true });
-      toast({ title: "Image Uploaded", description: "Your image has been uploaded successfully." });
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast({ variant: "destructive", title: "Upload Failed", description: "There was a problem uploading your image." });
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  function selectFromGallery(imageUrl: string) {
-    form.setValue("imageUrl", imageUrl, { shouldValidate: true });
-    setIsGalleryOpen(false);
-    toast({ title: "Image Selected", description: "Image from gallery has been selected." });
-  }
 
   async function onAddSubmit(data: ProductFormValues) {
     if (!user) {
@@ -257,7 +213,6 @@ export default function ShopPage() {
         name: data.name,
         description: data.description,
         price: data.price,
-        imageUrl: data.imageUrl,
       });
       toast({
         title: "Product Updated",
@@ -304,7 +259,6 @@ export default function ShopPage() {
 
 
   const isLoading = authLoading || isDataLoading;
-  const fileInputId = "file-upload";
   const displayedProducts = products.length > 0 ? products : defaultProducts.map((p, i) => ({...p, id: `default-${i}`}));
   
   const renderForm = (isEditMode: boolean) => (
@@ -349,73 +303,6 @@ export default function ShopPage() {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="imageUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Product Image</FormLabel>
-                <FormControl>
-                    <Input id="image-url-input" className="hidden" {...field} />
-                </FormControl>
-                <Card>
-                  <CardContent className="p-2">
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-24 h-24 bg-muted rounded-md flex items-center justify-center">
-                        {form.watch("imageUrl") ? (
-                          <Image src={form.watch("imageUrl")} alt="Product image preview" layout="fill" className="object-cover rounded-md" />
-                        ) : (
-                          <ShoppingCart className="h-8 w-8 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                         <label htmlFor={fileInputId} className="inline-flex items-center justify-center gap-2 cursor-pointer">
-                            <Button type="button" asChild variant="outline" size="sm">
-                                <div>
-                                <Upload className="mr-2 h-4 w-4" />
-                                <span>Upload Image</span>
-                                </div>
-                            </Button>
-                         </label>
-                         <input id={fileInputId} name={fileInputId} type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} disabled={uploading}/>
-                          <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-                              <DialogTrigger asChild>
-                                  <Button type="button" variant="outline" size="sm">
-                                      <GalleryHorizontal className="mr-2 h-4 w-4" />
-                                      <span>Select from Gallery</span>
-                                  </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl">
-                                  <DialogHeader>
-                                      <DialogTitle>Select from Gallery</DialogTitle>
-                                      <DialogDescription>
-                                          Choose an image from the school's gallery.
-                                      </DialogDescription>
-                                  </DialogHeader>
-                                  <ScrollArea className="h-[60vh]">
-                                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4">
-                                      {PlaceHolderImages.filter(img => img.id.startsWith('gallery-')).map(image => (
-                                          <Card key={image.id} className="cursor-pointer hover:border-primary" onClick={() => selectFromGallery(image.imageUrl)}>
-                                              <CardContent className="p-0">
-                                                  <div className="relative aspect-square w-full">
-                                                      <Image src={image.imageUrl} alt={image.description} fill className="object-cover rounded-lg" />
-                                                  </div>
-                                              </CardContent>
-                                          </Card>
-                                      ))}
-                                  </div>
-                                  </ScrollArea>
-                              </DialogContent>
-                          </Dialog>
-                      </div>
-                    </div>
-                    {uploading && <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2"><Loader2 className="animate-spin h-4 w-4" /> Uploading...</div>}
-                  </CardContent>
-                </Card>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => {
               if (isEditMode) {
@@ -425,8 +312,8 @@ export default function ShopPage() {
                   setIsAddDialogOpen(false);
               }
           }}>Cancel</Button>
-          <Button type="submit" disabled={form.formState.isSubmitting || uploading}>
-            {(form.formState.isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {(form.formState.isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isEditMode ? "Save Changes" : "Add Product"}
           </Button>
         </DialogFooter>
@@ -461,7 +348,6 @@ export default function ShopPage() {
         )}
       </div>
       
-      {/* Edit Product Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
           if (!isOpen) {
               setEditingProduct(null);
@@ -489,11 +375,6 @@ export default function ShopPage() {
                 {displayedProducts.map((item) => (
                 <Card key={item.id} className="flex flex-col">
                     <CardHeader>
-                        <div className="relative w-full h-40 bg-muted rounded-md flex items-center justify-center">
-                            <Image src={item.imageUrl} alt={item.name} layout="fill" className="object-cover rounded-t-lg" />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="flex-grow space-y-2 pt-4">
                         <div className="flex justify-between items-start">
                             <CardTitle className="font-headline">{item.name}</CardTitle>
                             {user && (
@@ -507,7 +388,7 @@ export default function ShopPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                        <DropdownMenuItem onClick={() => handleEditClick(item)}>
+                                        <DropdownMenuItem onClick={() => handleEditClick(item)} disabled={item.id.startsWith('default-')}>
                                             <Pencil className="mr-2 h-4 w-4" />
                                             <span>Edit</span>
                                         </DropdownMenuItem>
@@ -540,6 +421,8 @@ export default function ShopPage() {
                                 </AlertDialog>
                             )}
                         </div>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-2 pt-0">
                          <CardDescription>{item.description}</CardDescription>
                          <p className="text-2xl font-bold">₹{item.price.toFixed(2)}</p>
                     </CardContent>
