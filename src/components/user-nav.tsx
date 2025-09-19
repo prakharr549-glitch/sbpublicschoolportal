@@ -1,4 +1,8 @@
 
+"use client";
+
+import { useAuthState, useSignOut } from "react-firebase-hooks/auth";
+import { auth } from "@/lib/firebase";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,13 +16,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
+import { Loader2 } from "lucide-react";
 
 export function UserNav() {
   const router = useRouter();
+  const [user, loading] = useAuthState(auth);
+  const [signOut, isSigningOut] = useSignOut(auth);
 
-  const handleLogout = () => {
-    router.push("/login");
+  const handleLogout = async () => {
+    const success = await signOut();
+    if (success) {
+      router.push("/login");
+    }
+  };
+
+  if (loading) {
+    return <Loader2 className="h-6 w-6 animate-spin" />;
+  }
+
+  if (!user) {
+    return (
+      <Button onClick={() => router.push("/login")}>
+        Log In
+      </Button>
+    )
   }
 
   return (
@@ -26,17 +47,17 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={"/avatars/01.png"} alt={"User"} />
-            <AvatarFallback>{'U'}</AvatarFallback>
+            <AvatarImage src={user.photoURL ?? ""} alt={user.displayName ?? "User"} />
+            <AvatarFallback>{user.displayName?.charAt(0) ?? user.email?.charAt(0) ?? 'U'}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Guest User</p>
+            <p className="text-sm font-medium leading-none">{user.displayName ?? 'Guest User'}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              guest@example.com
+              {user.email ?? 'No email'}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -45,13 +66,14 @@ export function UserNav() {
           <DropdownMenuItem asChild>
             <Link href="/profile">Profile</Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            Settings
+          <DropdownMenuItem onClick={() => router.push('/admin')}>
+            Admin
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          Log in
+        <DropdownMenuItem onClick={handleLogout} disabled={isSigningOut}>
+          {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -22,9 +22,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { SchoolLogo } from "@/components/icons";
+import { auth, db } from "@/lib/firebase";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { updateProfile } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { SchoolLogo } from "@/components/icons";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -35,9 +40,11 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-export default function ProfilePage({ params }: { params: { slug: string } }) {
+export default function ProfilePage() {
   const { toast } = useToast();
+  const [user, loading] = useAuthState(auth);
   const router = useRouter();
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -46,14 +53,77 @@ export default function ProfilePage({ params }: { params: { slug: string } }) {
       email: "",
     },
   });
+  
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    async function fetchProfile() {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        form.reset({
+          name: data.name || user.displayName || "",
+          email: data.email || user.email || "",
+        });
+      } else {
+        form.reset({
+          name: user.displayName || "",
+          email: user.email || "",
+        });
+      }
+      setIsProfileLoading(false);
+    }
+
+    fetchProfile();
+  }, [user, loading, form, router]);
 
   async function onSubmit(data: ProfileFormValues) {
-    toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
-    });
+    if (!user) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "You must be logged in to update your profile.",
+        });
+        return;
+    }
 
-    router.push('/dashboard');
+    try {
+        await updateProfile(user, { displayName: data.name });
+        
+        await setDoc(doc(db, "users", user.uid), { 
+            name: data.name,
+            email: data.email,
+        }, { merge: true });
+        
+        toast({
+            title: "Profile Updated",
+            description: "Your profile has been successfully updated.",
+        });
+
+        router.push('/dashboard');
+
+    } catch (error) {
+        console.error("Error updating profile:", error);
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: "There was an error updating your profile.",
+        });
+    }
+  }
+  
+  if (loading || isProfileLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -64,9 +134,9 @@ export default function ProfilePage({ params }: { params: { slug: string } }) {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">Create Your Profile</CardTitle>
+            <CardTitle className="text-center">Your Profile</CardTitle>
             <CardDescription className="text-center">
-              Please complete your profile information below.
+              Manage your profile details below.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -92,7 +162,7 @@ export default function ProfilePage({ params }: { params: { slug: string } }) {
                     <FormItem>
                       <FormLabel>Email Address</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your email" {...field} />
+                        <Input placeholder="Your email" {...field} disabled />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
