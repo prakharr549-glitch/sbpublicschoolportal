@@ -45,7 +45,6 @@ type Message = {
   text: string;
   senderId: string;
   timestamp: any;
-  imageUrl?: string;
 };
 
 type ChatDetails = {
@@ -278,5 +277,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    
