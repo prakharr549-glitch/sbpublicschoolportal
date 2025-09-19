@@ -11,16 +11,6 @@ import { z } from 'zod';
 import { getFirestore, Query } from 'firebase-admin/firestore';
 import { initializeApp, getApps, App } from 'firebase-admin/app';
 
-// Ensure Firebase Admin is initialized
-let adminApp: App;
-if (!getApps().length) {
-  adminApp = initializeApp();
-} else {
-  adminApp = getApps()[0];
-}
-const db = getFirestore(adminApp);
-
-
 const DeleteChatInputSchema = z.string().describe("The ID of the chat to delete.");
 export type DeleteChatInput = z.infer<typeof DeleteChatInputSchema>;
 
@@ -39,27 +29,38 @@ const deleteChatFlow = ai.defineFlow(
       throw new Error("Chat ID is required.");
     }
 
+    let adminApp: App;
+    if (!getApps().length) {
+      adminApp = initializeApp();
+    } else {
+      adminApp = getApps()[0];
+    }
+    const db = getFirestore(adminApp);
+
     const messagesPath = `chats/${chatId}/messages`;
     const messagesRef = db.collection(messagesPath);
 
     try {
-        // Delete the messages subcollection in batches
-        const batchSize = 100;
-        let query: Query = messagesRef.orderBy('__name__').limit(batchSize);
-        let snapshot = await query.get();
+      const batchSize = 100;
+      let query: Query = messagesRef.limit(batchSize);
 
-        while (snapshot.size > 0) {
-            const batch = db.batch();
-            snapshot.docs.forEach((doc) => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
-            snapshot = await query.get();
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const snapshot = await query.get();
+        if (snapshot.size === 0) {
+          break;
         }
 
-        // After deleting the subcollection, delete the main chat document
-        const chatDocRef = db.collection('chats').doc(chatId);
-        await chatDocRef.delete();
+        const batch = db.batch();
+        snapshot.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+      }
+
+      // After deleting the subcollection, delete the main chat document
+      const chatDocRef = db.collection('chats').doc(chatId);
+      await chatDocRef.delete();
 
     } catch (error) {
       console.error("Error deleting chat in flow:", error);
