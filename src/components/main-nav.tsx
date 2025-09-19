@@ -13,6 +13,11 @@ import {
   User,
   Truck,
   Image as ImageIcon,
+  Radio,
+  MessageSquare,
+  Download,
+  MapPin,
+  Video,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -24,6 +29,11 @@ const navItems = [
   { href: "/shop", label: "Shop", icon: ShoppingCart },
   { href: "/about", label: "About Us", icon: Info },
   { href: "/homework", label: "Homework", icon: BookOpen },
+  { href: "/livestream", label: "Live Stream", icon: Radio },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
+  { href: "/results", label: "Download Result", icon: Download },
+  { href: "/track-driver", label: "Track Driver", icon: MapPin },
+  { href: "/videos", label: "School Videos", icon: Video },
 ];
 
 const userRoleNavItems = [
