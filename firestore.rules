@@ -1,9 +1,52 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read and write access only to authenticated users
+    
+    // By default, deny all reads and writes
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
+    }
+
+    // Allow users to read and write their own user document
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+
+    // Admins list is publicly readable, but only authenticated users can modify it.
+    match /admins/{adminId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Announcements are publicly readable, but only authenticated users can modify them.
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Homework is publicly readable, but only authenticated users can modify it.
+    match /homework/{homeworkId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Products are publicly readable, but only authenticated users can modify them.
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Students list is readable and writable only by authenticated users.
+    match /students/{studentId} {
+      allow read, create, update, delete: if request.auth != null;
+    }
+
+    // Teachers list is publicly readable, but only authenticated users can modify it.
+    match /teachers/{teacherId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
     }
   }
 }
