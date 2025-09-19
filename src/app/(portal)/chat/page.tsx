@@ -205,7 +205,7 @@ export default function ChatListPage() {
                     className="bg-destructive hover:bg-destructive/90"
                     onClick={handleDeleteAllConversations}
                 >
-                Continue
+                Delete
                 </AlertDialogAction>
             </AlertDialogFooter>
             </AlertDialogContent>
