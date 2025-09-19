@@ -1,65 +1,63 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isSignedIn() {
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
       return request.auth != null;
     }
-    
-    function isOwner(userId) {
-        return request.auth.uid == userId;
+
+    // Helper function to check if the user is a participant in a chat
+    function isChatParticipant(chatId) {
+      return request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
     }
 
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // USERS: 
-    // - Authenticated users can read all user profiles (to start chats)
-    // - Users can only create and update their own profile
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && isOwner(userId);
+      // Authenticated users can read all user profiles (for starting new chats)
+      allow list: if isAuthenticated();
+      // Any authenticated user can read any user's profile
+      allow read: if isAuthenticated();
+      // Only the user themselves can create or update their own profile
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
     
-    // ADMINS, TEACHERS, DRIVERS, ANNOUNCEMENTS, HOMEWORK:
-    // - Allow read for any authenticated user.
-    // - Allow write for any authenticated user (simplification for now).
+    // Rules for the 'chats' collection
+    match /chats/{chatId} {
+      // Allow read and update if the user is a participant
+      allow read, update: if isChatParticipant(chatId);
+      // Allow create if the user is authenticated and is part of the new chat
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.users;
+
+      // Rules for the 'messages' subcollection
+      match /messages/{messageId} {
+        // Allow read and write if the user is a participant in the parent chat
+        allow read, write: if isChatParticipant(chatId);
+      }
+    }
+
+    // Rules for other collections (admins, drivers, teachers, students, etc.)
     match /admins/{docId} {
-      allow read, write: if isSignedIn();
-    }
-    match /teachers/{docId} {
-      allow read, write: if isSignedIn();
-    }
-     match /drivers/{docId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isAuthenticated();
     }
     match /announcements/{docId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isAuthenticated();
+    }
+    match /drivers/{docId} {
+      allow read, write: if isAuthenticated();
     }
     match /homework/{docId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isAuthenticated();
     }
-    
-    // PRODUCTS:
-    // - Allow read for any authenticated user.
-    // - Allow create, update, delete for any authenticated user (simplification).
-    match /products/{productId} {
-      allow read, write, delete: if isSignedIn();
+    match /products/{docId} {
+      allow read, write: if isAuthenticated();
     }
-    
-    // CHATS & MESSAGES:
-    // - Users can only read/write chats they are a part of.
-    match /chats/{chatId} {
-      allow read, create, update: if isSignedIn() && request.auth.uid in resource.data.users;
-      
-       match /messages/{messageId} {
-         allow read, create: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.users.hasAny([request.auth.uid]);
-       }
+    match /students/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+    match /teachers/{docId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }
