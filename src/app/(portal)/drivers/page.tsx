@@ -1,0 +1,388 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, PlusCircle, Phone, MoreHorizontal, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { db, auth } from "@/lib/firebase";
+import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
+
+const driverFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  mobile: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit mobile number."),
+  vanNo: z.string().min(1, "Van number is required."),
+  upAddress: z.string().min(5, "Up address must be at least 5 characters."),
+  downAddress: z.string().min(5, "Down address must be at least 5 characters."),
+});
+
+type DriverFormValues = z.infer<typeof driverFormSchema>;
+
+type Driver = DriverFormValues & { id: string };
+
+const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+    </svg>
+  );
+
+export default function DriversPage() {
+  const [user, authLoading] = useAuthState(auth);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const { toast } = useToast();
+
+  const form = useForm<DriverFormValues>({
+    resolver: zodResolver(driverFormSchema),
+    defaultValues: {
+      name: "",
+      mobile: "",
+      vanNo: "",
+      upAddress: "",
+      downAddress: "",
+    },
+  });
+
+  useEffect(() => {
+    if (authLoading) return;
+    if(!user) {
+        setIsDataLoading(false);
+        return;
+    }
+
+    const q = query(collection(db, "drivers"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const driversData: Driver[] = [];
+      querySnapshot.forEach((doc) => {
+        driversData.push({ id: doc.id, ...(doc.data() as DriverFormValues) });
+      });
+      setDrivers(driversData);
+      setIsDataLoading(false);
+    }, (error) => {
+        console.error("Error fetching drivers:", error);
+        toast({
+            variant: "destructive",
+            title: "Permission Denied",
+            description: "You do not have permission to view this data.",
+        });
+        setIsDataLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, authLoading, toast]);
+
+  async function onSubmit(data: DriverFormValues) {
+    try {
+      await addDoc(collection(db, "drivers"), data);
+      toast({
+        title: "Driver Added",
+        description: `${data.name} has been added.`,
+      });
+      form.reset();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding driver: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was a problem adding the driver.",
+      });
+    }
+  }
+
+  async function handleDelete(driverId: string) {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to perform this action.",
+      });
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, "drivers", driverId));
+      toast({
+        title: "Driver Deleted",
+        description: "The driver has been successfully removed.",
+      });
+    } catch (error) {
+      console.error("Error deleting driver:", error);
+      toast({
+        variant: "destructive",
+        title: "Deletion Failed",
+        description: "There was a problem deleting the driver.",
+      });
+    }
+  }
+
+
+  const isLoading = authLoading || isDataLoading;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight font-headline">
+          Driver Management
+        </h1>
+        {user && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Driver
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                <DialogTitle>Add New Driver</DialogTitle>
+                <DialogDescription>
+                    Fill in the details below to add a new driver.
+                </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                    <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                        control={form.control}
+                        name="mobile"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Mobile Number</FormLabel>
+                            <FormControl>
+                                <Input type="tel" placeholder="e.g., 9876543210" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="vanNo"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Van Number</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., UP65 1234" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                     <FormField
+                        control={form.control}
+                        name="upAddress"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Up Address (Morning Route)</FormLabel>
+                            <FormControl>
+                                <Textarea placeholder="Enter the morning route address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="downAddress"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Down Address (Afternoon Route)</FormLabel>
+                            <FormControl>
+                                <Textarea placeholder="Enter the afternoon route address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <DialogFooter className="mt-4 pt-4 border-t sticky bottom-0 bg-background">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Driver
+                    </Button>
+                    </DialogFooter>
+                </form>
+                </Form>
+            </DialogContent>
+            </Dialog>
+        )}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Driver List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-24">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Mobile</TableHead>
+                  <TableHead>Van No.</TableHead>
+                  <TableHead>Up Address</TableHead>
+                  <TableHead>Down Address</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {drivers.length > 0 ? (
+                  drivers.map((driver) => (
+                    <TableRow key={driver.id}>
+                      <TableCell className="font-medium">{driver.name}</TableCell>
+                      <TableCell>{driver.mobile}</TableCell>
+                      <TableCell>{driver.vanNo}</TableCell>
+                      <TableCell>{driver.upAddress}</TableCell>
+                      <TableCell>{driver.downAddress}</TableCell>
+                      <TableCell className="text-right">
+                      <AlertDialog>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                                <a href={`tel:${driver.mobile}`}>
+                                    <Phone className="mr-2 h-4 w-4" />
+                                    <span>Call</span>
+                                </a>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <a href={`https://wa.me/${driver.mobile}`} target="_blank" rel="noopener noreferrer">
+                                <WhatsAppIcon className="mr-2 h-4 w-4" />
+                                <span>WhatsApp</span>
+                                </a>
+                            </DropdownMenuItem>
+                            {user && (<>
+                                <DropdownMenuSeparator />
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                            </>)}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the record for {driver.name}.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                className="bg-destructive hover:bg-destructive/90"
+                                onClick={() => handleDelete(driver.id)}
+                            >
+                                Continue
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No drivers found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+    
