@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -69,7 +68,20 @@ const productFormSchema = z.object({
   ),
 });
 
+const checkoutFormSchema = z.object({
+    studentName: z.string().min(2, "Student name is required."),
+    studentClass: z.string().min(1, "Class is required."),
+    age: z.preprocess(
+      (a) => parseInt(z.string().parse(a), 10),
+      z.number().positive("Age must be a positive number.")
+    ),
+    phoneNumber: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit phone number."),
+    address: z.string().min(10, "Address is required."),
+    rollNumber: z.string().min(1, "Roll number is required."),
+});
+
 type ProductFormValues = z.infer<typeof productFormSchema>;
+type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
 type Product = {
   id: string;
@@ -123,6 +135,7 @@ export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [cart, setCart] = useState<Product[]>([]);
@@ -136,6 +149,18 @@ export default function ShopPage() {
       name: "",
       description: "",
       price: 0,
+    },
+  });
+
+  const checkoutForm = useForm<CheckoutFormValues>({
+    resolver: zodResolver(checkoutFormSchema),
+    defaultValues: {
+        studentName: "",
+        studentClass: "",
+        age: undefined,
+        phoneNumber: "",
+        address: "",
+        rollNumber: "",
     },
   });
 
@@ -212,15 +237,14 @@ export default function ShopPage() {
       return;
     }
     try {
-      const isDefaultProduct = editingProduct.id.startsWith('default-');
       const productData = {
         name: data.name,
         description: data.description,
         price: data.price,
       };
 
-      if (isDefaultProduct) {
-        await addDoc(collection(db, "products"), {
+      if (editingProduct.id.startsWith('default-')) {
+         await addDoc(collection(db, "products"), {
           ...productData,
           createdAt: Timestamp.now(),
         });
@@ -300,11 +324,55 @@ export default function ShopPage() {
     return cart.reduce((total, product) => total + product.price, 0);
   };
 
+  const onCheckoutSubmit = (data: CheckoutFormValues) => {
+    const phoneNumber = "6392702249";
+    const cartItemsText = cart.map(item => `- ${item.name} (INR ${item.price.toFixed(2)})`).join('\n');
+    const total = getCartTotal();
+
+    const message = `
+*New Order Request*
+
+*Student Details:*
+Name: ${data.studentName}
+Class: ${data.studentClass}
+Age: ${data.age}
+Phone: ${data.phoneNumber}
+Address: ${data.address}
+Roll No: ${data.rollNumber}
+
+*Order Summary:*
+${cartItemsText}
+
+*Total Amount: INR ${total.toFixed(2)}*
+    `.trim();
+
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+    try {
+        window.open(whatsappUrl, '_blank');
+        toast({
+            title: "Redirecting to WhatsApp",
+            description: "Please send the pre-filled message to complete your order.",
+        });
+        setCart([]);
+        setIsCartOpen(false);
+        setIsCheckoutOpen(false);
+        checkoutForm.reset();
+    } catch (error) {
+        console.error("Failed to open WhatsApp:", error);
+        toast({
+            variant: "destructive",
+            title: "Order Failed",
+            description: "Could not open WhatsApp. Please try again.",
+        });
+    }
+  };
+
 
   const isLoading = authLoading || isDataLoading;
   const displayedProducts = products.length > 0 ? products : defaultProducts.map((p, i) => ({...p, id: `default-${i}`}));
   
-  const renderForm = (isEditMode: boolean) => (
+  const renderProductForm = (isEditMode: boolean) => (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(isEditMode ? onEditSubmit : onAddSubmit)} className="space-y-4 py-4">
         <FormField
@@ -395,8 +463,8 @@ export default function ShopPage() {
                     <p className="text-center text-muted-foreground">Your cart is empty.</p>
                   ) : (
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4">
-                      {cart.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between">
+                      {cart.map((item, index) => (
+                        <div key={`${item.id}-${index}`} className="flex items-center justify-between">
                           <div>
                             <p className="font-medium">{item.name}</p>
                             <p className="text-sm text-muted-foreground">INR {item.price.toFixed(2)}</p>
@@ -418,7 +486,7 @@ export default function ShopPage() {
                       <p>INR {getCartTotal().toFixed(2)}</p>
                     </div>
                     <DialogFooter>
-                        <Button className="w-full">Proceed to Checkout</Button>
+                        <Button className="w-full" onClick={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }}>Proceed to Checkout</Button>
                     </DialogFooter>
                   </>
                 )}
@@ -451,7 +519,7 @@ export default function ShopPage() {
                     Fill in the product details below.
                     </DialogDescription>
                 </DialogHeader>
-                {renderForm(false)}
+                {renderProductForm(false)}
                 </DialogContent>
             </Dialog>
             )}
@@ -471,7 +539,97 @@ export default function ShopPage() {
               Update the product details below.
             </DialogDescription>
           </DialogHeader>
-          {editingProduct && renderForm(true)}
+          {editingProduct && renderProductForm(true)}
+        </DialogContent>
+      </Dialog>
+       
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+                <DialogTitle>Checkout</DialogTitle>
+                <DialogDescription>
+                    Please provide student details to complete the order.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...checkoutForm}>
+                <form onSubmit={checkoutForm.handleSubmit(onCheckoutSubmit)} className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                     <FormField
+                        control={checkoutForm.control}
+                        name="studentName"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Student Name</FormLabel>
+                                <FormControl><Input placeholder="Full name" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={checkoutForm.control}
+                            name="studentClass"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Class</FormLabel>
+                                    <FormControl><Input placeholder="e.g., Grade 5" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={checkoutForm.control}
+                            name="rollNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Roll No.</FormLabel>
+                                    <FormControl><Input placeholder="e.g., 21" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                     <FormField
+                        control={checkoutForm.control}
+                        name="age"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Age</FormLabel>
+                                <FormControl><Input type="number" placeholder="e.g., 10" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={checkoutForm.control}
+                        name="phoneNumber"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Phone Number</FormLabel>
+                                <FormControl><Input type="tel" placeholder="10-digit number" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={checkoutForm.control}
+                        name="address"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Address</FormLabel>
+                                <FormControl><Textarea placeholder="Full residential address" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <DialogFooter className="mt-4 pt-4 border-t">
+                        <Button type="button" variant="outline" onClick={() => { setIsCheckoutOpen(false); setIsCartOpen(true);}}>Back to Cart</Button>
+                        <Button type="submit" disabled={checkoutForm.formState.isSubmitting}>
+                            {checkoutForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Place Order via WhatsApp
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
         </DialogContent>
       </Dialog>
 
@@ -556,3 +714,5 @@ export default function ShopPage() {
     </div>
   );
 }
+
+    
