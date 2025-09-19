@@ -27,9 +27,11 @@ export default function LoginPage() {
     try {
       await signInWithPopup(auth, provider);
       // The useEffect will handle the redirect once the user state is updated.
-    } catch (error) {
-      console.error("Error signing in with Google", error);
-      setIsSigningIn(false); // Reset on error
+    } catch (error: any) {
+      if (error.code !== 'auth/popup-closed-by-user') {
+        console.error("Error signing in with Google", error);
+      }
+      setIsSigningIn(false); // Reset on error or cancellation
     }
   };
 
