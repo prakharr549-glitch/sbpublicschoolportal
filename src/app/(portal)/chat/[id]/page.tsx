@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db, storage } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import {
   collection,
   onSnapshot,
@@ -16,12 +16,10 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
-import { Loader2, Send, ArrowLeft, Paperclip, MoreVertical, Trash2 } from "lucide-react";
+import { Loader2, Send, ArrowLeft, MoreVertical, Trash2 } from "lucide-react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter, useParams } from "next/navigation";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import Image from "next/image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,12 +59,10 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
   const [chatDetails, setChatDetails] = useState<ChatDetails | null>(null);
   const { toast } = useToast();
   const [currentUser] = useAuthState(auth);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -148,40 +144,6 @@ export default function ChatPage() {
         description: "Could not send message.",
       });
       setNewMessage(messageText);
-    }
-  };
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !currentUser) return;
-
-    setIsUploading(true);
-    try {
-      const storageRef = ref(storage, `chat-uploads/${chatId}/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const imageUrl = await getDownloadURL(storageRef);
-
-      await addDoc(collection(db, "chats", chatId, "messages"), {
-        text: "",
-        senderId: currentUser.uid,
-        timestamp: serverTimestamp(),
-        imageUrl: imageUrl,
-      });
-
-      const chatDocRef = doc(db, "chats", chatId);
-      await updateDoc(chatDocRef, {
-        lastMessage: "📷 Image",
-        lastMessageTimestamp: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast({
-        variant: "destructive",
-        title: "Upload Failed",
-        description: "Could not upload the image.",
-      });
-    } finally {
-      setIsUploading(false);
     }
   };
   
@@ -282,19 +244,7 @@ export default function ChatPage() {
                         : "bg-muted"
                     }`}
                   >
-                     {message.imageUrl ? (
-                        <a href={message.imageUrl} target="_blank" rel="noopener noreferrer">
-                            <Image
-                                src={message.imageUrl}
-                                alt="Chat image"
-                                width={300}
-                                height={300}
-                                className="rounded-md object-cover cursor-pointer"
-                            />
-                        </a>
-                    ) : (
-                        <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
-                    )}
+                    <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
                   </div>
                   <p className={`text-xs text-muted-foreground mt-1 ${isCurrentUser ? 'text-right' : 'text-left'}`}>
                      {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -314,22 +264,6 @@ export default function ChatPage() {
       </div>
       <div className="p-4 border-t">
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-            >
-                {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
-            </Button>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImageUpload}
-                className="hidden"
-                accept="image/*"
-            />
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
