@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -565,8 +565,8 @@ ${cartItemsText}
                     Please enter the administrator password to continue.
                 </DialogDescription>
             </DialogHeader>
-            <Form {...{} as any}>
-                <form>
+            <FormProvider {...{} as any}>
+                <form onSubmit={(e) => e.preventDefault()}>
                     <div className="space-y-4 py-2 pb-4">
                         <div className="space-y-2">
                             <FormLabel htmlFor="password">Password</FormLabel>
@@ -588,7 +588,7 @@ ${cartItemsText}
                         </Button>
                     </DialogFooter>
                 </form>
-            </Form>
+            </FormProvider>
         </DialogContent>
       </Dialog>
 
