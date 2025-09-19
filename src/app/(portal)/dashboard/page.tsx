@@ -11,13 +11,6 @@ import Link from 'next/link';
 
 const overviewItems = [
   {
-    title: "School AI",
-    value: "Since 2014",
-    icon: Bot,
-    link: "/school-ai",
-    description: "Engage with our AI-powered school assistant."
-  },
-  {
     title: "Admission Form",
     value: "Submission",
     icon: FileText,
@@ -60,7 +53,7 @@ export default function DashboardPage() {
           Here's a quick overview of what's happening at school.
         </p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {overviewItems.map((item) => (
           <Link href={item.link} key={item.title} target={item.link.startsWith('http') ? '_blank' : '_self'}>
             <Card className="hover:bg-muted/50 transition-colors">
