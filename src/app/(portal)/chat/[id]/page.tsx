@@ -15,6 +15,7 @@ import {
   serverTimestamp,
   doc,
   updateDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { Loader2, Send, ArrowLeft, MoreVertical, Trash2 } from "lucide-react";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -45,6 +46,7 @@ type Message = {
   text: string;
   senderId: string;
   timestamp: any;
+  deleteAt?: Timestamp;
 };
 
 type ChatDetails = {
@@ -90,8 +92,12 @@ export default function ChatPage() {
       q,
       (querySnapshot) => {
         const messagesData: Message[] = [];
+        const now = Timestamp.now();
         querySnapshot.forEach((doc) => {
-          messagesData.push({ id: doc.id, ...doc.data() } as Message);
+          const data = doc.data();
+          if (!data.deleteAt || data.deleteAt > now) {
+            messagesData.push({ id: doc.id, ...data } as Message);
+          }
         });
         setMessages(messagesData);
         setIsLoading(false);
@@ -125,10 +131,13 @@ export default function ChatPage() {
     setNewMessage("");
 
     try {
+       const deleteAtTimestamp = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
+      
       await addDoc(collection(db, "chats", chatId, "messages"), {
         text: messageText,
         senderId: currentUser.uid,
         timestamp: serverTimestamp(),
+        deleteAt: deleteAtTimestamp,
       });
       const chatDocRef = doc(db, "chats", chatId);
       await updateDoc(chatDocRef, {
