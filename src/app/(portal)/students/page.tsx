@@ -59,12 +59,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Trash2, Phone, MoreHorizontal } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, Phone, MoreHorizontal, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
 
 const studentFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -102,6 +104,12 @@ export default function StudentsPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [classFilter, setClassFilter] = useState("all");
   const { toast } = useToast();
+  const router = useRouter();
+
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(true);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [isVerified, setIsVerified] = useState(false);
 
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
@@ -115,6 +123,7 @@ export default function StudentsPage() {
   });
 
   useEffect(() => {
+    if (!isVerified) return;
     if (authLoading) return;
     if (!user) {
       setIsDataLoading(false);
@@ -144,7 +153,24 @@ export default function StudentsPage() {
     );
 
     return () => unsubscribe();
-  }, [user, authLoading, toast]);
+  }, [user, authLoading, toast, isVerified]);
+
+  const handlePasswordVerification = () => {
+    if (passwordInput === '355995') {
+      setIsVerified(true);
+      setIsPasswordDialogOpen(false);
+      setPasswordError('');
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+
+  const handlePasswordDialogClose = (isOpen: boolean) => {
+    if (!isOpen && !isVerified) {
+      router.push('/dashboard');
+    }
+    setIsPasswordDialogOpen(isOpen);
+  };
 
   async function onSubmit(data: StudentFormValues) {
     try {
@@ -190,7 +216,7 @@ export default function StudentsPage() {
     }
   }
 
-  const isLoading = authLoading || isDataLoading;
+  const isLoading = authLoading || (isVerified && isDataLoading);
   
   const availableClasses = ["all", ...Array.from(new Set(students.map(s => s.class)))];
   
@@ -198,6 +224,43 @@ export default function StudentsPage() {
     if (classFilter === "all") return true;
     return student.class === classFilter;
   });
+
+  if (!isVerified) {
+    return (
+        <Dialog open={isPasswordDialogOpen} onOpenChange={handlePasswordDialogClose}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Access Required</DialogTitle>
+                    <DialogDescription>
+                        Please enter the password to view student information.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                    <div className="space-y-4 py-2 pb-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={passwordInput}
+                                onChange={(e) => setPasswordInput(e.target.value)}
+                                placeholder="Enter password"
+                            />
+                            {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" type="button" onClick={() => handlePasswordDialogClose(false)}>Cancel</Button>
+                        <Button type="submit">
+                            <Lock className="mr-2 h-4 w-4"/>
+                            Verify
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+      </Dialog>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -421,6 +484,5 @@ export default function StudentsPage() {
     </div>
   );
 }
-
 
     
