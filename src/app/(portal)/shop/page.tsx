@@ -35,6 +35,14 @@ import {
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from "@/components/ui/dropdown-menu";
+import {
   Form,
   FormControl,
   FormField,
@@ -49,7 +57,7 @@ import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Loader2, PlusCircle, Trash2, ShoppingCart, Upload, GalleryHorizontal, Pencil } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, ShoppingCart, Upload, GalleryHorizontal, Pencil, MoreHorizontal } from "lucide-react";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -124,7 +132,6 @@ const defaultProducts: Omit<Product, 'id' | 'createdAt'>[] = [
 export default function ShopPage() {
   const [user, authLoading] = useAuthState(auth);
   const [products, setProducts] = useState<Product[]>([]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -176,10 +183,10 @@ export default function ShopPage() {
         price: editingProduct.price,
         imageUrl: editingProduct.imageUrl
       });
-    } else if (isAddDialogOpen) {
+    } else {
       form.reset({ name: "", description: "", price: 0, imageUrl: "" });
     }
-  }, [editingProduct, form, isAddDialogOpen, isEditDialogOpen]);
+  }, [editingProduct, form, isEditDialogOpen]);
 
 
   async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -208,32 +215,6 @@ export default function ShopPage() {
     toast({ title: "Image Selected", description: "Image from gallery has been selected." });
   }
 
-
-  async function onAddSubmit(data: ProductFormValues) {
-    if (!user) {
-      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to add a product." });
-      return;
-    }
-    try {
-      await addDoc(collection(db, "products"), {
-        ...data,
-        createdAt: Timestamp.now(),
-      });
-      toast({
-        title: "Product Added",
-        description: `${data.name} has been added to the shop.`,
-      });
-      form.reset();
-      setIsAddDialogOpen(false);
-    } catch (error) {
-      console.error("Error adding product: ", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "There was a problem adding the product.",
-      });
-    }
-  }
   
   async function onEditSubmit(data: ProductFormValues) {
     if (!user || !editingProduct) {
@@ -298,7 +279,7 @@ export default function ShopPage() {
   
   const renderForm = (isEditMode: boolean) => (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(isEditMode ? onEditSubmit : onAddSubmit)} className="space-y-4 py-4">
+      <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4 py-4">
         <FormField
           control={form.control}
           name="name"
@@ -410,13 +391,11 @@ export default function ShopPage() {
               if (isEditMode) {
                   setIsEditDialogOpen(false);
                   setEditingProduct(null);
-              } else {
-                  setIsAddDialogOpen(false);
               }
           }}>Cancel</Button>
           <Button type="submit" disabled={form.formState.isSubmitting || uploading}>
             {(form.formState.isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditMode ? "Save Changes" : "Add Product"}
+            Save Changes
           </Button>
         </DialogFooter>
       </form>
@@ -429,19 +408,6 @@ export default function ShopPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">
           School Shop
         </h1>
-        {user && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Add New Product</DialogTitle>
-                <DialogDescription>
-                  Fill in the details below to add a new item to the shop.
-                </DialogDescription>
-              </DialogHeader>
-              {renderForm(false)}
-            </DialogContent>
-          </Dialog>
-        )}
       </div>
       
       {/* Edit Product Dialog */}
@@ -471,29 +437,33 @@ export default function ShopPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {displayedProducts.map((item) => (
                 <Card key={item.id} className="flex flex-col">
-                    <CardHeader className="flex-row items-center justify-center pt-6">
-                        <ShoppingCart className="h-10 w-10 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent className="flex-grow space-y-2">
-                         <CardTitle className="text-center">{item.name}</CardTitle>
-                         <CardDescription className="text-center">{item.description}</CardDescription>
-                         <p className="text-2xl font-bold text-center">₹{item.price.toFixed(2)}</p>
-                    </CardContent>
-                    <CardFooter className="flex-col items-stretch gap-2 border-t pt-4">
-                    <Button className="w-full">Add to Cart</Button>
-                    {user && products.some(p => p.id === item.id) && (
-                        <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="w-full" onClick={() => handleEditClick(item)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                            </Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="sm" className="w-full">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                    </Button>
-                                </AlertDialogTrigger>
+                    <CardHeader>
+                        <div className="flex justify-between items-start">
+                            <CardTitle className="font-headline">{item.name}</CardTitle>
+                            {user && products.some(p => p.id === item.id) && (
+                                <AlertDialog>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => handleEditClick(item)}>
+                                            <Pencil className="mr-2 h-4 w-4" />
+                                            <span>Edit</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                <span>Delete</span>
+                                            </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -511,9 +481,16 @@ export default function ShopPage() {
                                     </AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
-                            </AlertDialog>
+                                </AlertDialog>
+                            )}
                         </div>
-                    )}
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-2">
+                         <CardDescription>{item.description}</CardDescription>
+                         <p className="text-2xl font-bold">₹{item.price.toFixed(2)}</p>
+                    </CardContent>
+                    <CardFooter>
+                         <Button className="w-full">Add to Cart</Button>
                     </CardFooter>
                 </Card>
                 ))}
