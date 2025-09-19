@@ -79,32 +79,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-            <CardHeader>
-            <CardTitle>Quick Links</CardTitle>
-            <CardDescription>
-                Access important resources and information.
-            </CardDescription>
-            </CardHeader>
-            <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-                <Link href="/announcements" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
-                <h3 className="font-semibold">Announcements</h3>
-                <p className="text-sm text-muted-foreground">Read the latest news.</p>
-                </Link>
-                <Link href="/shop" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
-                <h3 className="font-semibold">Shop</h3>
-                <p className="text-sm text-muted-foreground">Buy school merchandise.</p>
-                </Link>
-                <Link href="/homework" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
-                <h3 className="font-semibold">Homework</h3>
-                <p className="text-sm text-muted-foreground">Check your assignments.</p>
-                </Link>
-            </div>
-            </CardContent>
-        </Card>
-
+      <div className="grid gap-6 md:grid-cols-1">
         <Card>
           <CardHeader>
             <CardTitle>Our Facilities</CardTitle>
