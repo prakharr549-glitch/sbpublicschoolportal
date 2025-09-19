@@ -1,3 +1,4 @@
+
 import {
   Card,
   CardContent,
@@ -5,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Bot, FileText, Map } from "lucide-react";
+import { Bot, FileText, Map, FlaskConical, Computer, Presentation, Camera, Dribbble, Shuttlecock, Users } from "lucide-react";
 import Link from 'next/link';
 
 const overviewItems = [
@@ -31,6 +32,16 @@ const overviewItems = [
     description: "Find the quickest route to our campus."
   },
 ];
+
+const facilityItems = [
+    { name: "Science Lab", icon: FlaskConical },
+    { name: "Computer Lab", icon: Computer },
+    { name: "Smart Classes", icon: Presentation },
+    { name: "CCTV Surveillance", icon: Camera },
+    { name: "Basketball Ground", icon: Dribbble },
+    { name: "Badminton Ground", icon: Shuttlecock },
+    { name: "Large Playground", icon: Users },
+  ];
 
 export default function DashboardPage() {
   return (
@@ -61,30 +72,52 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Links</CardTitle>
-          <CardDescription>
-            Access important resources and information.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <Link href="/announcements" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
-              <h3 className="font-semibold">Announcements</h3>
-              <p className="text-sm text-muted-foreground">Read the latest news.</p>
-            </Link>
-            <Link href="/shop" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
-              <h3 className="font-semibold">Shop</h3>
-              <p className="text-sm text-muted-foreground">Buy school merchandise.</p>
-            </Link>
-            <Link href="/homework" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
-              <h3 className="font-semibold">Homework</h3>
-              <p className="text-sm text-muted-foreground">Check your assignments.</p>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+            <CardHeader>
+            <CardTitle>Quick Links</CardTitle>
+            <CardDescription>
+                Access important resources and information.
+            </CardDescription>
+            </CardHeader>
+            <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+                <Link href="/announcements" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+                <h3 className="font-semibold">Announcements</h3>
+                <p className="text-sm text-muted-foreground">Read the latest news.</p>
+                </Link>
+                <Link href="/shop" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+                <h3 className="font-semibold">Shop</h3>
+                <p className="text-sm text-muted-foreground">Buy school merchandise.</p>
+                </Link>
+                <Link href="/homework" className="p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+                <h3 className="font-semibold">Homework</h3>
+                <p className="text-sm text-muted-foreground">Check your assignments.</p>
+                </Link>
+            </div>
+            </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Our Facilities</CardTitle>
+            <CardDescription>
+              State-of-the-art amenities for a modern learning experience.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {facilityItems.map((facility) => (
+                <div key={facility.name} className="flex items-center gap-2 p-2 rounded-lg bg-secondary">
+                  <facility.icon className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium">{facility.name}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
