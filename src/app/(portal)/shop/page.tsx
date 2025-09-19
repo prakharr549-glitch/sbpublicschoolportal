@@ -132,6 +132,7 @@ const defaultProducts: Omit<Product, 'id' | 'createdAt'>[] = [
 export default function ShopPage() {
   const [user, authLoading] = useAuthState(auth);
   const [products, setProducts] = useState<Product[]>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -176,6 +177,13 @@ export default function ShopPage() {
   }, [user, authLoading, toast]);
   
   useEffect(() => {
+    if (isAddDialogOpen) {
+      form.reset({ name: "", description: "", price: 0, imageUrl: "" });
+    }
+  }, [isAddDialogOpen, form]);
+
+
+  useEffect(() => {
     if (isEditDialogOpen && editingProduct) {
       form.reset({
         name: editingProduct.name,
@@ -183,8 +191,6 @@ export default function ShopPage() {
         price: editingProduct.price,
         imageUrl: editingProduct.imageUrl
       });
-    } else {
-      form.reset({ name: "", description: "", price: 0, imageUrl: "" });
     }
   }, [editingProduct, form, isEditDialogOpen]);
 
@@ -215,6 +221,30 @@ export default function ShopPage() {
     toast({ title: "Image Selected", description: "Image from gallery has been selected." });
   }
 
+  async function onAddSubmit(data: ProductFormValues) {
+    if (!user) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to add a product." });
+      return;
+    }
+    try {
+      await addDoc(collection(db, "products"), {
+        ...data,
+        createdAt: Timestamp.now(),
+      });
+      toast({
+        title: "Product Added",
+        description: `${data.name} has been added to the shop.`,
+      });
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding product: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was a problem adding the product.",
+      });
+    }
+  }
   
   async function onEditSubmit(data: ProductFormValues) {
     if (!user || !editingProduct) {
@@ -279,7 +309,7 @@ export default function ShopPage() {
   
   const renderForm = (isEditMode: boolean) => (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4 py-4">
+      <form onSubmit={form.handleSubmit(isEditMode ? onEditSubmit : onAddSubmit)} className="space-y-4 py-4">
         <FormField
           control={form.control}
           name="name"
@@ -391,11 +421,13 @@ export default function ShopPage() {
               if (isEditMode) {
                   setIsEditDialogOpen(false);
                   setEditingProduct(null);
+              } else {
+                  setIsAddDialogOpen(false);
               }
           }}>Cancel</Button>
           <Button type="submit" disabled={form.formState.isSubmitting || uploading}>
             {(form.formState.isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Changes
+            {isEditMode ? "Save Changes" : "Add Product"}
           </Button>
         </DialogFooter>
       </form>
@@ -408,6 +440,25 @@ export default function ShopPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">
           School Shop
         </h1>
+        {user && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add New Product</DialogTitle>
+                <DialogDescription>
+                  Fill in the details for the new product.
+                </DialogDescription>
+              </DialogHeader>
+              {renderForm(false)}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
       
       {/* Edit Product Dialog */}
@@ -438,6 +489,11 @@ export default function ShopPage() {
                 {displayedProducts.map((item) => (
                 <Card key={item.id} className="flex flex-col">
                     <CardHeader>
+                        <div className="relative w-full h-40 bg-muted rounded-md flex items-center justify-center">
+                            <Image src={item.imageUrl} alt={item.name} layout="fill" className="object-cover rounded-t-lg" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-2 pt-4">
                         <div className="flex justify-between items-start">
                             <CardTitle className="font-headline">{item.name}</CardTitle>
                             {user && products.some(p => p.id === item.id) && (
@@ -484,8 +540,6 @@ export default function ShopPage() {
                                 </AlertDialog>
                             )}
                         </div>
-                    </CardHeader>
-                    <CardContent className="flex-grow space-y-2">
                          <CardDescription>{item.description}</CardDescription>
                          <p className="text-2xl font-bold">₹{item.price.toFixed(2)}</p>
                     </CardContent>
