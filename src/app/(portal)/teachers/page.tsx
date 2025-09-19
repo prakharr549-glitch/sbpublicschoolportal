@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -53,9 +54,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, PlusCircle, Phone, MoreHorizontal, Trash2, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { Label } from "@/components/ui/label";
 
 const teacherFormSchema = z.object({
@@ -86,7 +86,6 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   );
 
 export default function TeachersPage() {
-  const [user, authLoading] = useAuthState(auth);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -107,12 +106,6 @@ export default function TeachersPage() {
   });
 
   useEffect(() => {
-    if (authLoading) return;
-    if(!user) {
-        setIsDataLoading(false);
-        return;
-    }
-
     const q = query(collection(db, "teachers"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const teachersData: Teacher[] = [];
@@ -132,7 +125,7 @@ export default function TeachersPage() {
     });
 
     return () => unsubscribe();
-  }, [user, authLoading, toast]);
+  }, [toast]);
 
   const handlePasswordVerification = () => {
     if (passwordInput === '355995') {
@@ -173,14 +166,6 @@ export default function TeachersPage() {
   }
 
   async function handleDelete(teacherId: string) {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to perform this action.",
-      });
-      return;
-    }
     try {
       await deleteDoc(doc(db, "teachers", teacherId));
       toast({
@@ -198,7 +183,7 @@ export default function TeachersPage() {
   }
 
 
-  const isLoading = authLoading || isDataLoading;
+  const isLoading = isDataLoading;
 
   return (
     <div className="flex flex-col gap-6">
@@ -206,12 +191,10 @@ export default function TeachersPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">
           Teacher Management
         </h1>
-        {user && (
-            <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add New Teacher
-            </Button>
-        )}
+        <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add New Teacher
+        </Button>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -365,15 +348,13 @@ export default function TeachersPage() {
                                 <span>WhatsApp</span>
                                 </a>
                             </DropdownMenuItem>
-                            {user && (<>
-                                <DropdownMenuSeparator />
-                                <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
-                                    </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                            </>)}
+                            <DropdownMenuSeparator />
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <AlertDialogContent>

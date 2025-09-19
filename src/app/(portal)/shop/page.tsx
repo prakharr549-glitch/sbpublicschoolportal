@@ -53,9 +53,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, updateDoc, Timestamp, orderBy, limit } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -134,7 +133,6 @@ const defaultProducts: Omit<Product, 'id' | 'createdAt'>[] = [
 
 
 export default function ShopPage() {
-  const [user, authLoading] = useAuthState(auth);
   const [products, setProducts] = useState<Product[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -174,8 +172,6 @@ export default function ShopPage() {
   });
 
   useEffect(() => {
-    if (authLoading) return;
-
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(20));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const productsData: Product[] = [];
@@ -195,7 +191,7 @@ export default function ShopPage() {
     });
 
     return () => unsubscribe();
-  }, [user, authLoading, toast]);
+  }, [toast]);
   
   useEffect(() => {
     if (isAddDialogOpen) {
@@ -234,10 +230,6 @@ export default function ShopPage() {
   }
 
   async function onAddSubmit(data: ProductFormValues) {
-    if (!user) {
-      toast({ variant: "destructive", title: "Error", description: "You must be logged in to add a product." });
-      return;
-    }
     try {
       await addDoc(collection(db, "products"), {
         ...data,
@@ -248,7 +240,7 @@ export default function ShopPage() {
         description: `${data.name} has been added to the shop.`,
       });
       setIsAddDialogOpen(false);
-    } catch (error) {
+    } catch (error) => {
       console.error("Error adding product: ", error);
       toast({
         variant: "destructive",
@@ -259,8 +251,8 @@ export default function ShopPage() {
   }
   
   async function onEditSubmit(data: ProductFormValues) {
-    if (!user || !editingProduct) {
-      toast({ variant: "destructive", title: "Error", description: "You must be logged in and editing a product." });
+    if (!editingProduct) {
+      toast({ variant: "destructive", title: "Error", description: "No product selected for editing." });
       return;
     }
     try {
@@ -302,10 +294,6 @@ export default function ShopPage() {
 
 
   async function handleDelete(productId: string) {
-    if (!user) {
-      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to delete a product." });
-      return;
-    }
     try {
       await deleteProduct(productId);
       toast({
@@ -398,7 +386,7 @@ ${cartItemsText}
   };
 
 
-  const isLoading = authLoading || isDataLoading;
+  const isLoading = isDataLoading;
   const displayedProducts = products.length > 0 ? products : defaultProducts.map((p, i) => ({...p, id: `default-${i}`}));
   
   const renderProductForm = (isEditMode: boolean) => (
@@ -522,23 +510,21 @@ ${cartItemsText}
               </DialogContent>
             </Dialog>
 
-            {user && (
-                <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                    <span className="sr-only">Open menu</span>
-                    <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Shop Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => requestPassword(() => setIsAddDialogOpen(true))}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        <span>Add Product</span>
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-                </DropdownMenu>
-            )}
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Shop Actions</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => requestPassword(() => setIsAddDialogOpen(true))}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    <span>Add Product</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </div>
       
@@ -711,49 +697,47 @@ ${cartItemsText}
                     <CardHeader>
                         <div className="flex justify-between items-start">
                             <CardTitle className="font-headline">{item.name}</CardTitle>
-                             {user && (
-                                <AlertDialog>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                            <span className="sr-only">Open menu</span>
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                        <DropdownMenuItem onClick={() => handleEditClick(item as Product)}>
-                                            <Pencil className="mr-2 h-4 w-4" />
-                                            <span>Edit</span>
+                             <AlertDialog>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => handleEditClick(item as Product)}>
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        <span>Edit</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={item.id.startsWith('default-')} >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            <span>Delete</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <AlertDialogTrigger asChild>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={item.id.startsWith('default-')} >
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                <span>Delete</span>
-                                            </DropdownMenuItem>
-                                        </AlertDialogTrigger>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete the product "{item.name}".
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                        className="bg-destructive hover:bg-destructive/90"
-                                        onClick={() => requestPassword(() => handleDelete(item.id))}
-                                    >
-                                        Continue
-                                    </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                                </AlertDialog>
-                            )}
+                                    </AlertDialogTrigger>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the product "{item.name}".
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    className="bg-destructive hover:bg-destructive/90"
+                                    onClick={() => requestPassword(() => handleDelete(item.id))}
+                                >
+                                    Continue
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-2 pt-0">

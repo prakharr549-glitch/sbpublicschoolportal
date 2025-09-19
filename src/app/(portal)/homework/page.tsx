@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -51,9 +52,8 @@ import {
 } from "@/components/ui/popover";
 import { Loader2, PlusCircle, BookOpen, Trash2, CalendarIcon, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, orderBy, Timestamp, doc, deleteDoc } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
@@ -81,7 +81,6 @@ type Homework = {
 };
 
 export default function HomeworkPage() {
-  const [user, authLoading] = useAuthState(auth);
   const [homework, setHomework] = useState<Homework[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -103,8 +102,6 @@ export default function HomeworkPage() {
   });
 
   useEffect(() => {
-    if (authLoading) return;
-    
     const q = query(collection(db, "homework"), orderBy("assignedDate", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const homeworkData: Homework[] = [];
@@ -124,7 +121,7 @@ export default function HomeworkPage() {
     });
 
     return () => unsubscribe();
-  }, [user, authLoading, toast]);
+  }, [toast]);
   
   const handlePasswordVerification = () => {
     if (passwordInput === '6395') {
@@ -146,14 +143,6 @@ export default function HomeworkPage() {
   }
 
   async function onSubmit(data: HomeworkFormValues) {
-    if (!user) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "You must be logged in to add homework.",
-        });
-        return;
-    }
     try {
       await addDoc(collection(db, "homework"), {
         ...data,
@@ -177,14 +166,6 @@ export default function HomeworkPage() {
   }
 
   async function handleDelete(homeworkId: string) {
-    if (!user) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "You must be logged in to delete homework.",
-        });
-        return;
-    }
     try {
       await deleteDoc(doc(db, "homework", homeworkId));
       toast({
@@ -201,7 +182,7 @@ export default function HomeworkPage() {
     }
   }
   
-  const isLoading = authLoading || isDataLoading;
+  const isLoading = isDataLoading;
 
   return (
     <div className="flex flex-col gap-6">
@@ -212,12 +193,10 @@ export default function HomeworkPage() {
                 Homework Assignments
             </h1>
         </div>
-        {user && (
-          <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Homework
-          </Button>
-        )}
+        <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Homework
+        </Button>
       </div>
 
        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -406,35 +385,33 @@ export default function HomeworkPage() {
               <CardContent>
                 <p className="text-sm text-foreground/80">{hw.description}</p>
               </CardContent>
-              {user && (
-                 <CardFooter className="flex justify-end border-t pt-4">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete this
-                            homework assignment.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            className="bg-destructive hover:bg-destructive/90"
-                            onClick={() => requestPassword(() => handleDelete(hw.id))}>
-                            Continue
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                 </CardFooter>
-              )}
+              <CardFooter className="flex justify-end border-t pt-4">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this
+                        homework assignment.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        className="bg-destructive hover:bg-destructive/90"
+                        onClick={() => requestPassword(() => handleDelete(hw.id))}>
+                        Continue
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardFooter>
             </Card>
           ))
         ) : (

@@ -2,51 +2,17 @@
 "use client";
 
 import { SchoolLogo } from "@/components/icons";
-import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/firebase";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { useRouter } from "next/navigation";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [user, loading] = useAuthState(auth);
-  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
-    // If auth state is resolved and we have a user, redirect to profile
-    if (!loading && user) {
-      router.push("/profile");
-    }
-  }, [user, loading, router]);
+    router.push("/dashboard");
+  }, [router]);
 
-  const handleSignIn = async () => {
-    setIsSigningIn(true);
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      // The useEffect will handle the redirect once the user state is updated.
-    } catch (error: any) {
-      if (error.code !== 'auth/popup-closed-by-user') {
-        console.error("Error signing in with Google", error);
-      }
-    } finally {
-        setIsSigningIn(false);
-    }
-  };
-
-  // While loading, or if user is found (and redirect is imminent), show a loader.
-  if (loading || user) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Only show the login page if loading is false and there is no user
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm rounded-lg border bg-card p-8 shadow-sm">
@@ -56,13 +22,12 @@ export default function LoginPage() {
             SB Public Portal
           </h1>
           <p className="text-center text-muted-foreground">
-            Sign in to access the school's information portal.
+            Redirecting to the portal...
           </p>
         </div>
-        <Button onClick={handleSignIn} className="w-full bg-accent hover:bg-accent/90" disabled={isSigningIn}>
-           {isSigningIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Sign in with Google
-        </Button>
+        <div className="flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
         <p className="mt-6 text-center text-xs text-muted-foreground">
           &copy; {new Date().getFullYear()} S.B Public School. All rights reserved.
         </p>

@@ -1,38 +1,13 @@
+
 "use client";
 import { Header } from "@/components/header";
 import { TeacherNav } from "@/components/teacher-nav";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Loader2 } from "lucide-react";
 
 export default function TeacherLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [user, loading] = useAuthState(auth);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return null;
-  }
-
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-card md:block">

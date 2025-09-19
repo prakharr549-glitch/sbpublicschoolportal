@@ -54,9 +54,8 @@ import {
 } from "@/components/ui/select";
 import { Loader2, PlusCircle, Megaphone, Trash2, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, orderBy, Timestamp, doc, deleteDoc } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { Label } from "@/components/ui/label";
 
 const announcementCategories = ["Event", "Academic", "General"] as const;
@@ -80,7 +79,6 @@ type Announcement = {
 };
 
 export default function AnnouncementsPage() {
-  const [user, authLoading] = useAuthState(auth);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -100,8 +98,6 @@ export default function AnnouncementsPage() {
   });
 
   useEffect(() => {
-    if (authLoading) return;
-    
     const q = query(collection(db, "announcements"), orderBy("date", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const announcementsData: Announcement[] = [];
@@ -121,7 +117,7 @@ export default function AnnouncementsPage() {
     });
 
     return () => unsubscribe();
-  }, [user, authLoading, toast]);
+  }, [toast]);
 
   const handlePasswordVerification = () => {
     if (passwordInput === '6395') {
@@ -143,14 +139,6 @@ export default function AnnouncementsPage() {
   }
 
   async function onSubmit(data: AnnouncementFormValues) {
-    if (!user) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "You must be logged in to post an announcement.",
-        });
-        return;
-    }
     try {
       await addDoc(collection(db, "announcements"), {
         ...data,
@@ -173,14 +161,6 @@ export default function AnnouncementsPage() {
   }
 
   async function handleDelete(announcementId: string) {
-    if (!user) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "You must be logged in to delete an announcement.",
-        });
-        return;
-    }
     try {
       await deleteDoc(doc(db, "announcements", announcementId));
       toast({
@@ -197,7 +177,7 @@ export default function AnnouncementsPage() {
     }
   }
   
-  const isLoading = authLoading || isDataLoading;
+  const isLoading = isDataLoading;
 
   return (
     <div className="flex flex-col gap-6">
@@ -208,12 +188,10 @@ export default function AnnouncementsPage() {
                 School Announcements
             </h1>
         </div>
-        {user && (
-            <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Announcement
-            </Button>
-        )}
+        <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Announcement
+        </Button>
       </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -354,35 +332,33 @@ export default function AnnouncementsPage() {
               <CardContent>
                 <p className="text-sm text-foreground/80">{announcement.content}</p>
               </CardContent>
-              {user && (
-                 <CardFooter className="flex justify-end border-t pt-4">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete this
-                            announcement.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            className="bg-destructive hover:bg-destructive/90"
-                            onClick={() => requestPassword(() => handleDelete(announcement.id))}>
-                            Continue
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                 </CardFooter>
-              )}
+              <CardFooter className="flex justify-end border-t pt-4">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this
+                        announcement.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        className="bg-destructive hover:bg-destructive/90"
+                        onClick={() => requestPassword(() => handleDelete(announcement.id))}>
+                        Continue
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardFooter>
             </Card>
           ))
         ) : (
