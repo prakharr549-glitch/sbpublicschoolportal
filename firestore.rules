@@ -1,91 +1,48 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to get the user's role from their profile
-    function getRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-    
-    // Helper function to check if a user has a specific role
-    function isRole(userId, role) {
-      return getRole(userId) == role;
-    }
-    
-    // Helper function to check if a user has one of several roles
-    function isOneOfRoles(userId, roles) {
-      return getRole(userId) in roles;
-    }
 
-    // Users can read other user profiles (for chat lists etc.)
-    // Users can only create and update their own profile
+    // Helper function to check user roles
+    function isRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    // Users can read public profiles, but only write to their own.
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create, update: if request.auth.uid == userId;
-      allow delete: if false; // Disallow direct deletion
     }
 
-    // Authenticated users can read. Only admins can write.
-    match /admins/{adminId} {
-        allow read: if request.auth != null;
-        allow write: if isRole(request.auth.uid, 'Admin');
+    // Admins, Teachers, and Drivers lists are public to read.
+    // Writes are restricted to Admins.
+    match /(admins|drivers|teachers)/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isRole('Admin');
     }
 
-    // Authenticated users can read. Only admins can write.
-    match /teachers/{teacherId} {
-        allow read: if request.auth != null;
-        allow write: if isRole(request.auth.uid, 'Admin');
-    }
-
-    // Authenticated users can read. Only admins can write.
-    match /drivers/{driverId} {
-        allow read: if request.auth != null;
-        allow write: if isRole(request.auth.uid, 'Admin');
-    }
-
-    // Only Admins and Teachers can read student data. Only Admins can write.
+    // Students list can be read by Admins and Teachers.
+    // Writes are restricted to Admins.
     match /students/{studentId} {
-        allow read: if request.auth != null && isOneOfRoles(request.auth.uid, ['Admin', 'Teacher']);
-        allow write: if isRole(request.auth.uid, 'Admin');
+        allow read: if request.auth != null && (isRole('Admin') || isRole('Teacher'));
+        allow write: if request.auth != null && isRole('Admin');
     }
 
-    // Authenticated users can read. Only Admins and Teachers can write.
-    match /announcements/{announcementId} {
+    // Announcements and Homework can be read by anyone authenticated.
+    // Writes are restricted to Admins and Teachers.
+    match /(announcements|homework)/{docId} {
         allow read: if request.auth != null;
-        allow write: if request.auth != null && isOneOfRoles(request.auth.uid, ['Admin', 'Teacher']);
+        allow write: if request.auth != null && (isRole('Admin') || isRole('Teacher'));
     }
 
-    // Authenticated users can read. Only Admins and Teachers can write.
-    match /homework/{homeworkId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && isOneOfRoles(request.auth.uid, ['Admin', 'Teacher']);
-    }
-
-    // Authenticated users can read. Only Admins can write.
+    // Products can be read by anyone authenticated.
+    // Writes are restricted to Admins.
     match /products/{productId} {
         allow read: if request.auth != null;
-        allow write: if isRole(request.auth.uid, 'Admin');
+        allow write: if request.auth != null && isRole('Admin');
     }
 
-    // Rules for chat functionality
-    match /chats/{chatId} {
-      // Allow read, update, delete only if the user is part of the chat
-      allow read, update, delete: if request.auth.uid in resource.data.users;
-      // Allow create only if the user is part of the new chat document
-      allow create: if request.auth.uid in request.resource.data.users;
-      
-      // Rules for messages within a chat
-      match /messages/{messageId} {
-        // Allow read and create only if the user is part of the parent chat document
-        allow read, create: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
-        // Disallow updates and deletes to preserve chat history
-        allow update, delete: if false;
-      }
-    }
-    
-    // Fallback rule: Deny all other access
+    // Default deny all other access
     match /{document=**} {
       allow read, write: if false;
     }
