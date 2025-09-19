@@ -77,41 +77,41 @@ type Product = {
 };
 
 const defaultProducts: Omit<Product, 'id' | 'createdAt'>[] = [
-  {
-    name: "Formal Uniform",
-    description: "Complete formal uniform set for all grades.",
-    price: 1500,
-  },
-  {
-    name: "Sports Uniform",
-    description: "Comfortable sports uniform for physical activities.",
-    price: 800,
-  },
-  {
-    name: "School Tie",
-    description: "Official school tie, a part of the formal uniform.",
-    price: 250,
-  },
-  {
-    name: "School Belt",
-    description: "Durable school belt with the official school logo.",
-    price: 200,
-  },
-  {
-    name: "School Diary",
-    description: "Student diary for the current academic session.",
-    price: 150,
-  },
-  {
-    name: "School Bag",
-    description: "Sturdy and spacious backpack with school branding.",
-    price: 900,
-  },
-  {
-    name: "Notebooks Set",
-    description: "A set of 6 notebooks for all subjects.",
-    price: 300,
-  }
+    {
+        name: "Formal Uniform",
+        description: "Complete formal uniform set for all grades.",
+        price: 1500,
+    },
+    {
+        name: "Sports Uniform",
+        description: "Comfortable sports uniform for physical activities.",
+        price: 800,
+    },
+    {
+        name: "School Tie",
+        description: "Official school tie, a part of the formal uniform.",
+        price: 250,
+    },
+    {
+        name: "School Belt",
+        description: "Durable school belt with the official school logo.",
+        price: 200,
+    },
+    {
+        name: "School Diary",
+        description: "Student diary for the current academic session.",
+        price: 150,
+    },
+    {
+        name: "School Bag",
+        description: "Sturdy and spacious backpack with school branding.",
+        price: 900,
+    },
+    {
+        name: "Notebooks Set",
+        description: "A set of 6 notebooks for all subjects.",
+        price: 300,
+    }
 ];
 
 
@@ -440,7 +440,7 @@ export default function ShopPage() {
                     </CardHeader>
                     <CardContent className="flex-grow space-y-2 pt-0">
                          <CardDescription>{item.description}</CardDescription>
-                         <p className="text-2xl font-bold">₹{item.price.toFixed(2)}</p>
+                         <p className="text-2xl font-bold">INR {item.price.toFixed(2)}</p>
                     </CardContent>
                     <CardFooter>
                          <Button className="w-full">Add to Cart</Button>
