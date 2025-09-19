@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -23,11 +24,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { SchoolLogo } from "@/components/icons";
+import Link from "next/link";
+import { Label } from "@/components/ui/label";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -43,6 +46,11 @@ export default function ProfilePage() {
   const user = auth.currentUser;
   const router = useRouter();
   const [isProfileLoading, setIsProfileLoading] = useState(true);
+  
+  const [isVerified, setIsVerified] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -71,8 +79,10 @@ export default function ProfilePage() {
       }
       setIsProfileLoading(false);
     }
-    fetchProfile();
-  }, [user, form]);
+    if (isVerified) {
+        fetchProfile();
+    }
+  }, [user, form, isVerified]);
 
   async function onSubmit(data: ProfileFormValues) {
     if (!user) {
@@ -91,6 +101,7 @@ export default function ProfilePage() {
           uid: user.uid,
           name: data.name,
           email: data.email,
+          role: 'student'
         };
 
         await setDoc(doc(db, "users", user.uid), userProfileData, { merge: true });
@@ -110,6 +121,63 @@ export default function ProfilePage() {
             description: "There was an error updating your profile.",
         });
     }
+  }
+
+  const handlePasswordVerification = () => {
+    if (passwordInput === '000555') {
+        setIsVerified(true);
+        setPasswordError('');
+    } else {
+        setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+
+
+  if (!isVerified) {
+    return (
+        <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+            <div className="w-full max-w-sm">
+                <div className="mb-8 flex flex-col items-center justify-center gap-4">
+                    <SchoolLogo className="h-12 w-12 text-primary" />
+                </div>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-center">Verification Required</CardTitle>
+                        <CardDescription className="text-center">
+                            Please enter the password to proceed.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        value={passwordInput}
+                                        onChange={(e) => setPasswordInput(e.target.value)}
+                                        placeholder="Enter access code"
+                                    />
+                                    {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                                </div>
+                                <Button type="submit" className="w-full">
+                                    <Lock className="mr-2 h-4 w-4"/>
+                                    Verify
+                                </Button>
+                            </div>
+                        </form>
+                        <div className="mt-4 text-center text-sm">
+                            <p className="text-muted-foreground">Don't have a password?</p>
+                            <Link href="/admission-form" className="font-medium text-primary hover:underline">
+                                Apply for admission to get access
+                            </Link>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
   }
 
   if (isProfileLoading) {
@@ -175,3 +243,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
