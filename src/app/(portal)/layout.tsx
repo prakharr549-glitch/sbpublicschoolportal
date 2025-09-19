@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
-
 export default function PortalLayout({
   children,
 }: {
@@ -29,9 +28,11 @@ export default function PortalLayout({
       </div>
     );
   }
-  
+
   if (!user) {
-    return null;
+    // This will be briefly rendered before the redirect happens, 
+    // or you can return null to avoid a flash of unstyled content.
+    return null; 
   }
 
   return (
