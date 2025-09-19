@@ -58,6 +58,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from "@/components/ui/select";
 import { Loader2, PlusCircle, BookOpen, Trash2, CalendarIcon, Lock, MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
@@ -92,6 +99,7 @@ export default function HomeworkPage() {
   const [homework, setHomework] = useState<Homework[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [classFilter, setClassFilter] = useState("all");
   const { toast } = useToast();
 
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
@@ -192,6 +200,13 @@ export default function HomeworkPage() {
   }
   
   const isLoading = isDataLoading;
+  
+  const availableClasses = ["all", ...Array.from(new Set(homework.map(hw => hw.class)))];
+  
+  const filteredHomework = homework.filter(hw => {
+    if (classFilter === "all") return true;
+    return hw.class === classFilter;
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -202,10 +217,22 @@ export default function HomeworkPage() {
                 Homework Assignments
             </h1>
         </div>
-        <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Homework
-        </Button>
+        <div className="flex items-center gap-2">
+            <Select value={classFilter} onValueChange={setClassFilter}>
+                <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by class" />
+                </SelectTrigger>
+                <SelectContent>
+                    {availableClasses.map(c => (
+                            <SelectItem key={c} value={c}>{c === 'all' ? 'All Classes' : c}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Homework
+            </Button>
+        </div>
       </div>
 
        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -372,8 +399,8 @@ export default function HomeworkPage() {
              <div className="flex justify-center items-center h-48">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
-        ) : homework.length > 0 ? (
-          homework.map((hw) => (
+        ) : filteredHomework.length > 0 ? (
+          filteredHomework.map((hw) => (
             <Card key={hw.id}>
               <CardHeader>
                 <div className="flex justify-between items-start gap-4">
@@ -440,8 +467,8 @@ export default function HomeworkPage() {
                 <CardContent className="py-12">
                     <div className="text-center text-muted-foreground">
                         <BookOpen className="mx-auto h-12 w-12" />
-                        <h3 className="mt-4 text-lg font-semibold">No homework yet</h3>
-                        <p className="mt-2 text-sm">Check back later for new assignments.</p>
+                        <h3 className="mt-4 text-lg font-semibold">No homework found</h3>
+                        <p className="mt-2 text-sm">There are no assignments for the selected class, or no assignments have been posted yet.</p>
                     </div>
                 </CardContent>
             </Card>
