@@ -98,6 +98,7 @@ export default function HomeworkPage() {
       subject: "",
       class: "",
       description: "",
+      dueDate: new Date(),
     },
   });
 
