@@ -61,23 +61,14 @@ const deleteAllUserChatsFlow = ai.defineFlow(
         return; // No chats to delete
       }
       
-      const deletePromises: Promise<void>[] = [];
-      const mainBatch = db.batch();
-
-      snapshot.forEach(chatDoc => {
-        // Delete the messages subcollection
+      for (const chatDoc of snapshot.docs) {
+        // Delete the messages subcollection for each chat
         const messagesRef = chatDoc.ref.collection('messages');
-        deletePromises.push(deleteCollection(messagesRef));
-
-        // Add the main chat document to a batch delete
-        mainBatch.delete(chatDoc.ref);
-      });
-
-      // Wait for all subcollection deletions to complete
-      await Promise.all(deletePromises);
-
-      // Commit the batch deletion of main chat documents
-      await mainBatch.commit();
+        await deleteCollection(messagesRef);
+        
+        // After subcollection is deleted, delete the chat document itself
+        await chatDoc.ref.delete();
+      }
       
     } catch (error) {
       console.error(`Error deleting chats for user ${userId}:`, error);
