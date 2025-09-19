@@ -7,7 +7,6 @@ import {
   Info,
   BookOpen,
   Megaphone,
-  Images,
   LayoutDashboard,
   GraduationCap,
   UserCog,
@@ -22,7 +21,6 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/announcements", label: "Announcements", icon: Megaphone },
   { href: "/shop", label: "Shop", icon: ShoppingCart },
-  { href: "/gallery", label: "Gallery", icon: Images },
   { href: "/about", label: "About Us", icon: Info },
   { href: "/homework", label: "Homework", icon: BookOpen },
 ];
