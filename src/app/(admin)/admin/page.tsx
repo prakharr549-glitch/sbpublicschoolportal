@@ -42,7 +42,7 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-const avatarOptions = Array.from({ length: 10 }, (_, i) => `https://picsum.photos/seed/avatar${i + 1}/200`);
+const avatarOptions = Array.from({ length: 30 }, (_, i) => `https://picsum.photos/seed/avatar${i + 1}/200`);
 
 
 export default function AdminDashboardPage() {
@@ -191,7 +191,7 @@ export default function AdminDashboardPage() {
                     <FormItem>
                       <FormLabel>Profile Picture</FormLabel>
                       <FormControl>
-                        <div className="grid grid-cols-5 gap-2">
+                        <div className="grid grid-cols-10 gap-2">
                           {avatarOptions.map((url) => (
                             <button
                               type="button"
