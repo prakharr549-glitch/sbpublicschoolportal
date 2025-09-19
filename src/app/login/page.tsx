@@ -18,6 +18,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -34,16 +35,20 @@ import {
   sendEmailVerification
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import Link from "next/link";
 
 const signUpSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email(),
   password: z.string().min(6, "Password must be at least 6 characters."),
+  accessCode: z.string().refine(code => code === '000555', {
+    message: "Invalid access code. Please contact the school admin.",
+  }),
 });
 
 const signInSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6, "Password is required."),
+  password: z.string().min(1, "Password is required."),
 });
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -55,7 +60,7 @@ export default function LoginPage() {
 
   const signUpForm = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { name: "", email: "", password: "" },
+    defaultValues: { name: "", email: "", password: "", accessCode: "" },
   });
 
   const signInForm = useForm<SignInFormValues>({
@@ -108,10 +113,23 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Sign in error:", error);
+      const errorCode = error.code;
+      let errorMessage = error.message;
+
+      if (errorCode === 'auth/popup-closed-by-user') {
+        // This is a user action, not an error.
+        // Silently return without showing a toast.
+        return;
+      }
+      
+      if (errorCode === 'auth/wrong-password' || errorCode === 'auth/user-not-found' || errorCode === 'auth/invalid-credential') {
+        errorMessage = "Invalid email or password. Please try again.";
+      }
+
       toast({
         variant: "destructive",
         title: "Sign In Failed",
-        description: error.message || "Invalid credentials.",
+        description: errorMessage,
       });
     }
   };
@@ -185,7 +203,7 @@ export default function LoginPage() {
               <CardHeader>
                 <CardTitle>Create an Account</CardTitle>
                 <CardDescription>
-                  Fill in the form to create a new account.
+                  Enter the school access code to register.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -230,6 +248,19 @@ export default function LoginPage() {
                         </FormItem>
                       )}
                     />
+                     <FormField
+                      control={signUpForm.control}
+                      name="accessCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>School Access Code</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Enter code" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <Button type="submit" className="w-full" disabled={isSignUpSubmitting}>
                       {isSignUpSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Sign Up
@@ -237,6 +268,16 @@ export default function LoginPage() {
                   </form>
                 </Form>
               </CardContent>
+               <CardFooter className="flex-col items-start text-sm text-muted-foreground pt-4">
+                  <p>Don't have an access code?</p>
+                  <p>
+                    Please{" "}
+                    <Link href="/admission-form" className="font-medium text-primary hover:underline">
+                      submit an admission form
+                    </Link>{" "}
+                    to request access.
+                  </p>
+                </CardFooter>
             </Card>
           </TabsContent>
         </Tabs>
