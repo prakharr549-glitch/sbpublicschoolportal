@@ -84,6 +84,7 @@ export default function LoginPage() {
         uid: user.uid,
         name: data.name,
         email: user.email,
+        role: "Student",
       });
 
       await sendEmailVerification(user);

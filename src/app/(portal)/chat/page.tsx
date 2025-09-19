@@ -5,9 +5,6 @@ import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Loader2, MessageSquare, Plus, Search, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +17,7 @@ import {
   getDocs,
   addDoc,
   serverTimestamp,
+  QueryConstraint,
 } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -35,6 +33,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 type User = {
   id: string;
@@ -52,12 +52,15 @@ type Chat = {
   lastMessageTimestamp?: any;
 };
 
+const userRoles = ["All", "Admin", "Teacher", "Student", "Driver"];
+
 export default function ChatListPage() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("All");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const [currentUser] = useAuthState(auth);
@@ -106,11 +109,20 @@ export default function ChatListPage() {
     if (searchTerm.length > 2) {
       setIsUsersLoading(true);
       const fetchUsers = async () => {
+        const queryConstraints: QueryConstraint[] = [
+            where("name", ">=", searchTerm),
+            where("name", "<=", searchTerm + "\uf8ff")
+        ];
+        
+        if (roleFilter !== 'All') {
+            queryConstraints.push(where("role", "==", roleFilter));
+        }
+
         const usersQuery = query(
           collection(db, "users"),
-          where("name", ">=", searchTerm),
-          where("name", "<=", searchTerm + "\uf8ff")
+          ...queryConstraints
         );
+
         const querySnapshot = await getDocs(usersQuery);
         const usersData: User[] = [];
         querySnapshot.forEach((doc) => {
@@ -131,7 +143,7 @@ export default function ChatListPage() {
     } else {
       setUsers([]);
     }
-  }, [searchTerm, currentUser?.uid]);
+  }, [searchTerm, roleFilter, currentUser?.uid]);
 
   const handleCreateChat = async (otherUser: User) => {
     if (!currentUser) return;
@@ -198,14 +210,24 @@ export default function ChatListPage() {
                 Search for a user to start a conversation.
               </DialogDescription>
             </DialogHeader>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex gap-2">
+                <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                    placeholder="Search by name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                />
+                </div>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Role"/>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {userRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                    </SelectContent>
+                </Select>
             </div>
             <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
               {isUsersLoading ? (
