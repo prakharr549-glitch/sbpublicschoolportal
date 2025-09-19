@@ -240,7 +240,7 @@ export default function ShopPage() {
         description: `${data.name} has been added to the shop.`,
       });
       setIsAddDialogOpen(false);
-    } catch (error) => {
+    } catch (error) {
       console.error("Error adding product: ", error);
       toast({
         variant: "destructive",
