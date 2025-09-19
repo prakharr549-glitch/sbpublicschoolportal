@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -157,7 +158,7 @@ export default function ShopPage() {
     defaultValues: {
         studentName: "",
         studentClass: "",
-        age: undefined,
+        age: "" as any,
         phoneNumber: "",
         address: "",
         rollNumber: "",
@@ -714,5 +715,3 @@ ${cartItemsText}
     </div>
   );
 }
-
-    
