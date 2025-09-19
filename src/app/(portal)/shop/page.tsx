@@ -21,6 +21,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
     AlertDialog,
@@ -53,7 +54,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
-import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp, setDoc } from "firebase/firestore";
+import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal } from "lucide-react";
 
@@ -343,19 +344,26 @@ export default function ShopPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">
           School Shop
         </h1>
+        {user && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add New Product</DialogTitle>
+                <DialogDescription>
+                  Fill in the product details below.
+                </DialogDescription>
+              </DialogHeader>
+              {renderForm(false)}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
-      
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add New Product</DialogTitle>
-            <DialogDescription>
-              Fill in the product details below.
-            </DialogDescription>
-          </DialogHeader>
-          {renderForm(false)}
-        </DialogContent>
-      </Dialog>
       
       <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
           if (!isOpen) {
