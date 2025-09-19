@@ -51,11 +51,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Phone, MoreHorizontal, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, Phone, MoreHorizontal, Trash2, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { Label } from "@/components/ui/label";
 
 const teacherFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -90,6 +91,11 @@ export default function TeachersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const { toast } = useToast();
+
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
 
   const form = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherFormSchema),
@@ -127,6 +133,25 @@ export default function TeachersPage() {
 
     return () => unsubscribe();
   }, [user, authLoading, toast]);
+
+  const handlePasswordVerification = () => {
+    if (passwordInput === '355995') {
+      if (protectedAction) {
+        protectedAction();
+      }
+      setIsPasswordDialogOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      setProtectedAction(null);
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+  
+  const requestPassword = (action: () => void) => {
+    setProtectedAction(() => action);
+    setIsPasswordDialogOpen(true);
+  }
 
   async function onSubmit(data: TeacherFormValues) {
     try {
@@ -182,74 +207,114 @@ export default function TeachersPage() {
           Teacher Management
         </h1>
         {user && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Teacher
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                <DialogTitle>Add New Teacher</DialogTitle>
-                <DialogDescription>
-                    Fill in the details below to add a new teacher.
-                </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                    <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., Jane Smith" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="subject"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Subject</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., Mathematics" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="mobile"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Mobile Number</FormLabel>
-                        <FormControl>
-                            <Input type="tel" placeholder="e.g., 9876543210" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Save Teacher
-                    </Button>
-                    </DialogFooter>
-                </form>
-                </Form>
-            </DialogContent>
-            </Dialog>
+            <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add New Teacher
+            </Button>
         )}
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+            <DialogTitle>Add New Teacher</DialogTitle>
+            <DialogDescription>
+                Fill in the details below to add a new teacher.
+            </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., Jane Smith" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="subject"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Subject</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., Mathematics" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="mobile"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Mobile Number</FormLabel>
+                    <FormControl>
+                        <Input type="tel" placeholder="e.g., 9876543210" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Teacher
+                </Button>
+                </DialogFooter>
+            </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPasswordDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+              setPasswordInput('');
+              setPasswordError('');
+              setProtectedAction(null);
+          }
+          setIsPasswordDialogOpen(isOpen);
+      }}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Admin Access Required</DialogTitle>
+                <DialogDescription>
+                    Please enter the administrator password to continue.
+                </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                <div className="space-y-4 py-2 pb-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit">
+                        <Lock className="mr-2 h-4 w-4"/>
+                        Verify
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
+
 
       <Card>
         <CardHeader>
@@ -303,7 +368,7 @@ export default function TeachersPage() {
                             {user && (<>
                                 <DropdownMenuSeparator />
                                 <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     <span>Delete</span>
                                     </DropdownMenuItem>
@@ -322,7 +387,7 @@ export default function TeachersPage() {
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                                 className="bg-destructive hover:bg-destructive/90"
-                                onClick={() => handleDelete(teacher.id)}
+                                onClick={() => requestPassword(() => handleDelete(teacher.id))}
                             >
                                 Continue
                             </AlertDialogAction>
