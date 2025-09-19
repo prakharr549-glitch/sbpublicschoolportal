@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -42,6 +43,13 @@ import {
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -92,6 +100,7 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [classFilter, setClassFilter] = useState("all");
   const { toast } = useToast();
 
   const form = useForm<StudentFormValues>({
@@ -182,6 +191,13 @@ export default function StudentsPage() {
   }
 
   const isLoading = authLoading || isDataLoading;
+  
+  const availableClasses = ["all", ...Array.from(new Set(students.map(s => s.class)))];
+  
+  const filteredStudents = students.filter(student => {
+    if (classFilter === "all") return true;
+    return student.class === classFilter;
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -290,8 +306,20 @@ export default function StudentsPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Student List</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Student List</CardTitle>
+            <div className="flex items-center gap-2">
+                <Select value={classFilter} onValueChange={setClassFilter}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableClasses.map(c => (
+                             <SelectItem key={c} value={c}>{c === 'all' ? 'All Classes' : c}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -311,8 +339,8 @@ export default function StudentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {students.length > 0 ? (
-                  students.map((student) => (
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => (
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">{student.name}</TableCell>
                       <TableCell>{student.class}</TableCell>
@@ -381,7 +409,7 @@ export default function StudentsPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                      No students found.
+                      No students found for the selected filter.
                     </TableCell>
                   </TableRow>
                 )}
@@ -393,3 +421,6 @@ export default function StudentsPage() {
     </div>
   );
 }
+
+
+    
