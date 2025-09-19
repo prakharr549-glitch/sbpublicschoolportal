@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -565,19 +564,21 @@ ${cartItemsText}
                     Please enter the administrator password to continue.
                 </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-2 pb-4">
-                <div className="space-y-2">
-                    <FormLabel htmlFor="password">Password</FormLabel>
-                    <Input
-                        id="password"
-                        type="password"
-                        value={passwordInput}
-                        onChange={(e) => setPasswordInput(e.target.value)}
-                        placeholder="Enter password"
-                    />
-                    {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+            <Form {...{} as any}>
+                <div className="space-y-4 py-2 pb-4">
+                    <div className="space-y-2">
+                        <FormLabel htmlFor="password">Password</FormLabel>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                    </div>
                 </div>
-            </div>
+            </Form>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handlePasswordVerification}>
