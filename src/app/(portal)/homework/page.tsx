@@ -49,13 +49,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Loader2, PlusCircle, BookOpen, Trash2, CalendarIcon } from "lucide-react";
+import { Loader2, PlusCircle, BookOpen, Trash2, CalendarIcon, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, orderBy, Timestamp, doc, deleteDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Label } from "@/components/ui/label";
 
 const homeworkFormSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters."),
@@ -85,6 +86,11 @@ export default function HomeworkPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const { toast } = useToast();
+
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
 
   const form = useForm<HomeworkFormValues>({
     resolver: zodResolver(homeworkFormSchema),
@@ -119,6 +125,25 @@ export default function HomeworkPage() {
 
     return () => unsubscribe();
   }, [user, authLoading, toast]);
+  
+  const handlePasswordVerification = () => {
+    if (passwordInput === '6395') {
+      if (protectedAction) {
+        protectedAction();
+      }
+      setIsPasswordDialogOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      setProtectedAction(null);
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+  
+  const requestPassword = (action: () => void) => {
+    setProtectedAction(() => action);
+    setIsPasswordDialogOpen(true);
+  }
 
   async function onSubmit(data: HomeworkFormValues) {
     if (!user) {
@@ -188,13 +213,14 @@ export default function HomeworkPage() {
             </h1>
         </div>
         {user && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Homework
-              </Button>
-            </DialogTrigger>
+          <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Homework
+          </Button>
+        )}
+      </div>
+
+       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add New Homework</DialogTitle>
@@ -312,8 +338,46 @@ export default function HomeworkPage() {
               </Form>
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+
+      <Dialog open={isPasswordDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+              setPasswordInput('');
+              setPasswordError('');
+              setProtectedAction(null);
+          }
+          setIsPasswordDialogOpen(isOpen);
+      }}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Admin Access Required</DialogTitle>
+                <DialogDescription>
+                    Please enter the administrator password to continue.
+                </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                <div className="space-y-4 py-2 pb-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit">
+                        <Lock className="mr-2 h-4 w-4"/>
+                        Verify
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-col gap-4">
         {isLoading ? (
@@ -363,7 +427,7 @@ export default function HomeworkPage() {
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction 
                             className="bg-destructive hover:bg-destructive/90"
-                            onClick={() => handleDelete(hw.id)}>
+                            onClick={() => requestPassword(() => handleDelete(hw.id))}>
                             Continue
                           </AlertDialogAction>
                         </AlertDialogFooter>
