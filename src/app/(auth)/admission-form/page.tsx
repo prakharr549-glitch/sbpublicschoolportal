@@ -35,6 +35,7 @@ const admissionFormSchema = z.object({
   parentName: z.string().min(2, {
     message: "Parent's name must be at least 2 characters.",
   }),
+  phone: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit phone number."),
   address: z.string().min(10, {
     message: "Address must be at least 10 characters.",
   }),
@@ -52,6 +53,7 @@ export default function AdmissionFormPage() {
       name: "",
       class: "",
       parentName: "",
+      phone: "",
       address: "",
       description: "",
     },
@@ -65,6 +67,7 @@ export default function AdmissionFormPage() {
 *Student Name:* ${data.name}
 *Class:* ${data.class}
 *Parent's Name:* ${data.parentName}
+*Phone Number:* ${data.phone}
 *Address:* ${data.address}
 *Description:* ${data.description || "N/A"}
     `.trim();
@@ -148,6 +151,20 @@ export default function AdmissionFormPage() {
                     )}
                 />
               </div>
+
+               <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="e.g., 9876543210" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
