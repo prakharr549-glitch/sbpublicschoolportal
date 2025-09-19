@@ -36,6 +36,7 @@ import {
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import Link from "next/link";
+import { Separator } from "@/components/ui/separator";
 
 const signUpSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -117,8 +118,6 @@ export default function LoginPage() {
       let errorMessage = error.message;
 
       if (errorCode === 'auth/popup-closed-by-user') {
-        // This is a user action, not an error.
-        // Silently return without showing a toast.
         return;
       }
       
@@ -268,15 +267,18 @@ export default function LoginPage() {
                   </form>
                 </Form>
               </CardContent>
-               <CardFooter className="flex-col items-start text-sm text-muted-foreground pt-4">
-                  <p>Don't have an access code?</p>
-                  <p>
-                    Please{" "}
-                    <Link href="/admission-form" className="font-medium text-primary hover:underline">
-                      submit an admission form
-                    </Link>{" "}
-                    to request access.
-                  </p>
+              <CardFooter className="flex-col items-center text-sm text-muted-foreground pt-4 gap-4">
+                  <div className="flex items-center w-full">
+                    <Separator className="flex-1" />
+                    <p className="px-2">OR</p>
+                    <Separator className="flex-1" />
+                  </div>
+                  <p>If you don't have an access code, apply for one:</p>
+                  <Button variant="outline" className="w-full" asChild>
+                     <Link href="/admission-form">
+                        Submit Admission Form
+                    </Link>
+                  </Button>
                 </CardFooter>
             </Card>
           </TabsContent>
