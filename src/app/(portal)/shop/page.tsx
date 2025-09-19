@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -59,6 +60,7 @@ import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X, L
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { deleteProduct } from "@/ai/flows/delete-product-flow";
+import { Label } from "@/components/ui/label";
 
 const productFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -565,30 +567,28 @@ ${cartItemsText}
                     Please enter the administrator password to continue.
                 </DialogDescription>
             </DialogHeader>
-            <FormProvider {...{} as any}>
-                <form onSubmit={(e) => e.preventDefault()}>
-                    <div className="space-y-4 py-2 pb-4">
-                        <div className="space-y-2">
-                            <FormLabel htmlFor="password">Password</FormLabel>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={passwordInput}
-                                onChange={(e) => setPasswordInput(e.target.value)}
-                                placeholder="Enter password"
-                            />
-                            {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
-                        </div>
+            <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                <div className="space-y-4 py-2 pb-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" type="button" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
-                        <Button type="button" onClick={handlePasswordVerification}>
-                            <Lock className="mr-2 h-4 w-4"/>
-                            Verify
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </FormProvider>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit">
+                        <Lock className="mr-2 h-4 w-4"/>
+                        Verify
+                    </Button>
+                </DialogFooter>
+            </form>
         </DialogContent>
       </Dialog>
 
