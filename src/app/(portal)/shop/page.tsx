@@ -56,7 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
@@ -141,6 +141,12 @@ export default function ShopPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [cart, setCart] = useState<Product[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<Product | null>(null);
 
   const { toast } = useToast();
 
@@ -205,7 +211,25 @@ export default function ShopPage() {
       });
     }
   }, [editingProduct, form, isEditDialogOpen]);
-
+  
+  const handlePasswordVerification = () => {
+    if (passwordInput === '355995') {
+      if (protectedAction) {
+        protectedAction();
+      }
+      setIsPasswordDialogOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      setProtectedAction(null);
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+  
+  const requestPassword = (action: () => void) => {
+    setProtectedAction(() => action);
+    setIsPasswordDialogOpen(true);
+  }
 
   async function onAddSubmit(data: ProductFormValues) {
     if (!user) {
@@ -297,8 +321,10 @@ export default function ShopPage() {
   }
   
   const handleEditClick = (product: Product) => {
-    setEditingProduct(product);
-    setIsEditDialogOpen(true);
+    requestPassword(() => {
+        setEditingProduct(product);
+        setIsEditDialogOpen(true);
+    });
   };
   
   const handleAddToCart = (product: Product) => {
@@ -495,7 +521,6 @@ ${cartItemsText}
             </Dialog>
 
             {user && (
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 w-8 p-0">
@@ -505,28 +530,64 @@ ${cartItemsText}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Shop Actions</DropdownMenuLabel>
-                    <DialogTrigger asChild>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => requestPassword(() => setIsAddDialogOpen(true))}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         <span>Add Product</span>
                     </DropdownMenuItem>
-                    </DialogTrigger>
                 </DropdownMenuContent>
                 </DropdownMenu>
-                <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>Add New Product</DialogTitle>
-                    <DialogDescription>
-                    Fill in the product details below.
-                    </DialogDescription>
-                </DialogHeader>
-                {renderProductForm(false)}
-                </DialogContent>
-            </Dialog>
             )}
         </div>
       </div>
       
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+            <DialogDescription>Fill in the product details below.</DialogDescription>
+          </DialogHeader>
+          {renderProductForm(false)}
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isPasswordDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+              setPasswordInput('');
+              setPasswordError('');
+              setProtectedAction(null);
+          }
+          setIsPasswordDialogOpen(isOpen);
+      }}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Admin Access Required</DialogTitle>
+                <DialogDescription>
+                    Please enter the administrator password to continue.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2 pb-4">
+                <div className="space-y-2">
+                    <FormLabel htmlFor="password">Password</FormLabel>
+                    <Input
+                        id="password"
+                        type="password"
+                        value={passwordInput}
+                        onChange={(e) => setPasswordInput(e.target.value)}
+                        placeholder="Enter password"
+                    />
+                    {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handlePasswordVerification}>
+                    <Lock className="mr-2 h-4 w-4"/>
+                    Verify
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
           if (!isOpen) {
               setEditingProduct(null);
@@ -681,7 +742,7 @@ ${cartItemsText}
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
                                         className="bg-destructive hover:bg-destructive/90"
-                                        onClick={() => handleDelete(item.id)}
+                                        onClick={() => requestPassword(() => handleDelete(item.id))}
                                     >
                                         Continue
                                     </AlertDialogAction>
