@@ -15,6 +15,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -30,12 +37,19 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { SchoolLogo } from "@/components/icons";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+const userRoles = ["Student", "Teacher", "Admin", "Driver"] as const;
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
   email: z.string().email(),
+  photoURL: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  role: z.enum(userRoles, {
+    required_error: "Please select a role.",
+  }),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -51,9 +65,13 @@ export default function ProfilePage() {
     defaultValues: {
       name: "",
       email: "",
+      photoURL: "",
+      role: "Student",
     },
   });
   
+  const photoURL = form.watch("photoURL");
+
   useEffect(() => {
     if (loading) {
       return;
@@ -70,11 +88,15 @@ export default function ProfilePage() {
         form.reset({
           name: data.name || user.displayName || "",
           email: data.email || user.email || "",
+          photoURL: data.photoURL || user.photoURL || "",
+          role: data.role || "Student",
         });
       } else {
         form.reset({
           name: user.displayName || "",
           email: user.email || "",
+          photoURL: user.photoURL || "",
+          role: "Student",
         });
       }
       setIsProfileLoading(false);
@@ -94,11 +116,16 @@ export default function ProfilePage() {
     }
 
     try {
-        await updateProfile(user, { displayName: data.name });
+        await updateProfile(user, { 
+            displayName: data.name,
+            photoURL: data.photoURL 
+        });
         
         await setDoc(doc(db, "users", user.uid), { 
             name: data.name,
             email: data.email,
+            photoURL: data.photoURL,
+            role: data.role,
         }, { merge: true });
         
         toast({
@@ -142,6 +169,13 @@ export default function ProfilePage() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="flex items-center justify-center">
+                    <Avatar className="h-24 w-24">
+                        <AvatarImage src={photoURL || undefined} alt={form.getValues("name")} />
+                        <AvatarFallback>{form.getValues("name")?.charAt(0) || 'U'}</AvatarFallback>
+                    </Avatar>
+                </div>
+
                 <FormField
                   control={form.control}
                   name="name"
@@ -164,6 +198,43 @@ export default function ProfilePage() {
                       <FormControl>
                         <Input placeholder="Your email" {...field} disabled />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="photoURL"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profile Picture URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://example.com/image.png" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {userRoles.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
