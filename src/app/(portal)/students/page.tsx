@@ -48,11 +48,14 @@ import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { Textarea } from "@/components/ui/textarea";
 
 const studentFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   class: z.string().min(1, "Class is required."),
   rollNumber: z.string().min(1, "Roll number is required."),
+  phone: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit phone number."),
+  address: z.string().min(5, "Address must be at least 5 characters."),
 });
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
@@ -72,6 +75,8 @@ export default function StudentsPage() {
       name: "",
       class: "",
       rollNumber: "",
+      phone: "",
+      address: "",
     },
   });
 
@@ -167,7 +172,7 @@ export default function StudentsPage() {
                 Add New Student
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add New Student</DialogTitle>
                 <DialogDescription>
@@ -175,7 +180,7 @@ export default function StudentsPage() {
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                   <FormField
                     control={form.control}
                     name="name"
@@ -189,33 +194,61 @@ export default function StudentsPage() {
                       </FormItem>
                     )}
                   />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="class"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Class</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Grade 10A" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="rollNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Roll Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., 25" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <FormField
-                    control={form.control}
-                    name="class"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Class</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Grade 10A" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input type="tel" placeholder="e.g., 9876543210" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   <FormField
-                    control={form.control}
-                    name="rollNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Roll Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 25" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Enter student's address" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  <DialogFooter className="mt-4 pt-4 border-t sticky bottom-0 bg-background">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
                     </Button>
@@ -246,7 +279,9 @@ export default function StudentsPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Class</TableHead>
-                  <TableHead>Roll Number</TableHead>
+                  <TableHead>Roll No.</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Address</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -257,11 +292,13 @@ export default function StudentsPage() {
                       <TableCell className="font-medium">{student.name}</TableCell>
                       <TableCell>{student.class}</TableCell>
                       <TableCell>{student.rollNumber}</TableCell>
+                      <TableCell>{student.phone}</TableCell>
+                      <TableCell>{student.address}</TableCell>
                       <TableCell className="text-right">
                         {user && (
                            <AlertDialog>
                            <AlertDialogTrigger asChild>
-                             <Button variant="destructive" size="sm">
+                             <Button variant="destructive" size="icon">
                                <Trash2 className="h-4 w-4" />
                                <span className="sr-only">Delete</span>
                              </Button>
@@ -290,7 +327,7 @@ export default function StudentsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       No students found.
                     </TableCell>
                   </TableRow>
