@@ -28,26 +28,6 @@ export async function deleteChat(chatId: DeleteChatInput): Promise<void> {
   return deleteChatFlow(chatId);
 }
 
-// Helper function to delete a collection in batches
-async function deleteCollection(db: FirebaseFirestore.Firestore, collectionPath: string, batchSize: number): Promise<void> {
-  const collectionRef = db.collection(collectionPath);
-  let query: Query = collectionRef.orderBy('__name__').limit(batchSize);
-
-  while (true) {
-    const snapshot = await query.get();
-    if (snapshot.size === 0) {
-      break;
-    }
-
-    const batch = db.batch();
-    snapshot.docs.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-    await batch.commit();
-  }
-}
-
-
 const deleteChatFlow = ai.defineFlow(
   {
     name: 'deleteChatFlow',
@@ -58,14 +38,28 @@ const deleteChatFlow = ai.defineFlow(
     if (!chatId) {
       throw new Error("Chat ID is required.");
     }
-    
-    try {
-      const messagesPath = `chats/${chatId}/messages`;
-      await deleteCollection(db, messagesPath, 50);
 
-      // After deleting the subcollection, delete the main chat document
-      const chatDocRef = db.collection('chats').doc(chatId);
-      await chatDocRef.delete();
+    const messagesPath = `chats/${chatId}/messages`;
+    const messagesRef = db.collection(messagesPath);
+
+    try {
+        // Delete the messages subcollection in batches
+        const batchSize = 100;
+        let query: Query = messagesRef.orderBy('__name__').limit(batchSize);
+        let snapshot = await query.get();
+
+        while (snapshot.size > 0) {
+            const batch = db.batch();
+            snapshot.docs.forEach((doc) => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            snapshot = await query.get();
+        }
+
+        // After deleting the subcollection, delete the main chat document
+        const chatDocRef = db.collection('chats').doc(chatId);
+        await chatDocRef.delete();
 
     } catch (error) {
       console.error("Error deleting chat in flow:", error);
