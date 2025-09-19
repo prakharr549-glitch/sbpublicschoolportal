@@ -344,13 +344,24 @@ export default function ShopPage() {
           School Shop
         </h1>
         {user && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
-            </DialogTrigger>
+           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Shop Actions</DropdownMenuLabel>
+                <DialogTrigger asChild>
+                  <DropdownMenuItem>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    <span>Add Product</span>
+                  </DropdownMenuItem>
+                </DialogTrigger>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add New Product</DialogTitle>
@@ -360,7 +371,7 @@ export default function ShopPage() {
               </DialogHeader>
               {renderForm(false)}
             </DialogContent>
-          </Dialog>
+           </Dialog>
         )}
       </div>
       
