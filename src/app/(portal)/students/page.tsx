@@ -43,7 +43,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Trash2, User } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, User, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
@@ -296,31 +296,12 @@ export default function StudentsPage() {
                       <TableCell>{student.address}</TableCell>
                       <TableCell className="text-right">
                         {user && (
-                           <AlertDialog>
-                           <AlertDialogTrigger asChild>
-                             <Button variant="destructive" size="icon">
-                               <Trash2 className="h-4 w-4" />
-                               <span className="sr-only">Delete</span>
-                             </Button>
-                           </AlertDialogTrigger>
-                           <AlertDialogContent>
-                             <AlertDialogHeader>
-                               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                               <AlertDialogDescription>
-                                 This action cannot be undone. This will permanently delete the record for {student.name}.
-                               </AlertDialogDescription>
-                             </AlertDialogHeader>
-                             <AlertDialogFooter>
-                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                               <AlertDialogAction
-                                 className="bg-destructive hover:bg-destructive/90"
-                                 onClick={() => handleDelete(student.id)}
-                               >
-                                 Continue
-                               </AlertDialogAction>
-                             </AlertDialogFooter>
-                           </AlertDialogContent>
-                         </AlertDialog>
+                           <a href={`tel:${student.phone}`}>
+                            <Button variant="outline" size="icon">
+                              <Phone className="h-4 w-4" />
+                              <span className="sr-only">Call</span>
+                            </Button>
+                          </a>
                         )}
                       </TableCell>
                     </TableRow>
