@@ -19,7 +19,7 @@ import {
 import { Loader2, Send, ArrowLeft, User, Bot } from "lucide-react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
 type Message = {
   id: string;
@@ -33,7 +33,9 @@ type ChatDetails = {
     userAvatars: { [key: string]: string };
 }
 
-export default function ChatPage({ params }: { params: { id: string } }) {
+export default function ChatPage() {
+  const params = useParams();
+  const id = params.id as string;
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -44,10 +46,10 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!currentUser || !params.id) return;
+    if (!currentUser || !id) return;
 
     // Fetch chat details
-    const chatDocRef = doc(db, "chats", params.id);
+    const chatDocRef = doc(db, "chats", id);
     const unsubscribeChatDetails = onSnapshot(chatDocRef, (doc) => {
         if (doc.exists()) {
             setChatDetails(doc.data() as ChatDetails);
@@ -56,7 +58,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
 
     // Fetch messages
     const q = query(
-      collection(db, "chats", params.id, "messages"),
+      collection(db, "chats", id, "messages"),
       orderBy("timestamp", "asc")
     );
 
@@ -85,7 +87,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         unsubscribeChatDetails();
         unsubscribeMessages();
     };
-  }, [currentUser, params.id, toast]);
+  }, [currentUser, id, toast]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -99,13 +101,13 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     setNewMessage("");
 
     try {
-      await addDoc(collection(db, "chats", params.id, "messages"), {
+      await addDoc(collection(db, "chats", id, "messages"), {
         text: messageText,
         senderId: currentUser.uid,
         timestamp: serverTimestamp(),
       });
       // Update last message in the chat document
-      const chatDocRef = doc(db, "chats", params.id);
+      const chatDocRef = doc(db, "chats", id);
       await updateDoc(chatDocRef, {
         lastMessage: messageText,
         lastMessageTimestamp: serverTimestamp(),
