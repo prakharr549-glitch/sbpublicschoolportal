@@ -132,7 +132,7 @@ export default function ChatPage() {
     }
   }
   
-  const otherUserId = chatDetails && Object.keys(chatDetails.userNames).find(id => id !== currentUser?.uid);
+  const otherUserId = chatDetails && Object.keys(chatDetails.userNames).find(userId => userId !== currentUser?.uid);
   const otherUserName = otherUserId ? getParticipantDetails(otherUserId).name : 'Chat';
 
   return (
