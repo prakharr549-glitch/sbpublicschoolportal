@@ -58,11 +58,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Phone, MoreHorizontal, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, Phone, MoreHorizontal, Trash2, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { Label } from "@/components/ui/label";
 
 const adminRoles = [
   "Principal",
@@ -107,6 +108,11 @@ export default function AdminsPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const { toast } = useToast();
 
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
+
   const form = useForm<AdminFormValues>({
     resolver: zodResolver(adminFormSchema),
     defaultValues: {
@@ -142,6 +148,25 @@ export default function AdminsPage() {
 
     return () => unsubscribe();
   }, [user, authLoading, toast]);
+
+  const handlePasswordVerification = () => {
+    if (passwordInput === '355995') {
+      if (protectedAction) {
+        protectedAction();
+      }
+      setIsPasswordDialogOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      setProtectedAction(null);
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+  
+  const requestPassword = (action: () => void) => {
+    setProtectedAction(() => action);
+    setIsPasswordDialogOpen(true);
+  }
 
   async function onSubmit(data: AdminFormValues) {
     try {
@@ -197,13 +222,14 @@ export default function AdminsPage() {
           Admin Management
         </h1>
         {user && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-                <Button>
+            <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add New Admin
-                </Button>
-            </DialogTrigger>
+            </Button>
+        )}
+      </div>
+
+       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                 <DialogTitle>Add New Admin</DialogTitle>
@@ -273,9 +299,47 @@ export default function AdminsPage() {
                 </form>
                 </Form>
             </DialogContent>
-            </Dialog>
-        )}
-      </div>
+       </Dialog>
+      
+       <Dialog open={isPasswordDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+              setPasswordInput('');
+              setPasswordError('');
+              setProtectedAction(null);
+          }
+          setIsPasswordDialogOpen(isOpen);
+      }}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Admin Access Required</DialogTitle>
+                <DialogDescription>
+                    Please enter the administrator password to continue.
+                </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                <div className="space-y-4 py-2 pb-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit">
+                        <Lock className="mr-2 h-4 w-4"/>
+                        Verify
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
@@ -326,13 +390,15 @@ export default function AdminsPage() {
                                 <span>WhatsApp</span>
                                 </a>
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Delete</span>
-                                </DropdownMenuItem>
-                            </AlertDialogTrigger>
+                            {user && (<>
+                                <DropdownMenuSeparator />
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                             </>)}
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <AlertDialogContent>
@@ -346,7 +412,7 @@ export default function AdminsPage() {
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                                 className="bg-destructive hover:bg-destructive/90"
-                                onClick={() => handleDelete(admin.id)}
+                                onClick={() => requestPassword(() => handleDelete(admin.id))}
                             >
                                 Continue
                             </AlertDialogAction>
