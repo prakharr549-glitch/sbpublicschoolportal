@@ -21,7 +21,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
     AlertDialog,
@@ -327,25 +326,6 @@ export default function ShopPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">
           School Shop
         </h1>
-        {user && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Add New Product</DialogTitle>
-                <DialogDescription>
-                  Fill in the details for the new product.
-                </DialogDescription>
-              </DialogHeader>
-              {renderForm(false)}
-            </DialogContent>
-          </Dialog>
-        )}
       </div>
       
       <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
@@ -388,7 +368,7 @@ export default function ShopPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                        <DropdownMenuItem onClick={() => handleEditClick(item)} disabled={item.id.startsWith('default-')}>
+                                        <DropdownMenuItem onClick={() => handleEditClick(item as Product)}>
                                             <Pencil className="mr-2 h-4 w-4" />
                                             <span>Edit</span>
                                         </DropdownMenuItem>
