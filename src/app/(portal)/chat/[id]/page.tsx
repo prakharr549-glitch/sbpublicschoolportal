@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import {
   collection,
   onSnapshot,
@@ -16,16 +16,38 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
-import { Loader2, Send, ArrowLeft, User, Bot } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Paperclip, MoreVertical, Trash2 } from "lucide-react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter, useParams } from "next/navigation";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import Image from "next/image";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { deleteChat } from "@/ai/flows/delete-chat-flow";
+
 
 type Message = {
   id: string;
   text: string;
   senderId: string;
   timestamp: any;
+  imageUrl?: string;
 };
 
 type ChatDetails = {
@@ -35,30 +57,37 @@ type ChatDetails = {
 
 export default function ChatPage() {
   const params = useParams();
-  const id = params.id as string;
+  const chatId = params.id as string;
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
   const [chatDetails, setChatDetails] = useState<ChatDetails | null>(null);
   const { toast } = useToast();
   const [currentUser] = useAuthState(auth);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
-    if (!currentUser || !id) return;
+    if (!currentUser || !chatId) return;
 
-    // Fetch chat details
-    const chatDocRef = doc(db, "chats", id);
+    const chatDocRef = doc(db, "chats", chatId);
     const unsubscribeChatDetails = onSnapshot(chatDocRef, (doc) => {
         if (doc.exists()) {
             setChatDetails(doc.data() as ChatDetails);
+        } else {
+            // If chat is deleted, redirect away.
+            toast({
+                title: "Chat deleted",
+                description: "This conversation no longer exists.",
+            });
+            router.push("/chat");
         }
     });
 
-    // Fetch messages
     const q = query(
-      collection(db, "chats", id, "messages"),
+      collection(db, "chats", chatId, "messages"),
       orderBy("timestamp", "asc")
     );
 
@@ -87,7 +116,7 @@ export default function ChatPage() {
         unsubscribeChatDetails();
         unsubscribeMessages();
     };
-  }, [currentUser, id, toast]);
+  }, [currentUser, chatId, toast, router]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -101,13 +130,12 @@ export default function ChatPage() {
     setNewMessage("");
 
     try {
-      await addDoc(collection(db, "chats", id, "messages"), {
+      await addDoc(collection(db, "chats", chatId, "messages"), {
         text: messageText,
         senderId: currentUser.uid,
         timestamp: serverTimestamp(),
       });
-      // Update last message in the chat document
-      const chatDocRef = doc(db, "chats", id);
+      const chatDocRef = doc(db, "chats", chatId);
       await updateDoc(chatDocRef, {
         lastMessage: messageText,
         lastMessageTimestamp: serverTimestamp(),
@@ -119,11 +147,58 @@ export default function ChatPage() {
         title: "Error",
         description: "Could not send message.",
       });
-      // Re-set the input field with the message that failed to send
       setNewMessage(messageText);
     }
   };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentUser) return;
+
+    setIsUploading(true);
+    try {
+      const storageRef = ref(storage, `chat-uploads/${chatId}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const imageUrl = await getDownloadURL(storageRef);
+
+      await addDoc(collection(db, "chats", chatId, "messages"), {
+        text: "",
+        senderId: currentUser.uid,
+        timestamp: serverTimestamp(),
+        imageUrl: imageUrl,
+      });
+
+      const chatDocRef = doc(db, "chats", chatId);
+      await updateDoc(chatDocRef, {
+        lastMessage: "📷 Image",
+        lastMessageTimestamp: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: "Could not upload the image.",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
   
+  const handleDeleteConversation = async () => {
+    try {
+        await deleteChat(chatId);
+        // The useEffect hook will handle the redirect.
+    } catch (error) {
+        console.error("Error deleting conversation:", error);
+        toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: "Could not delete the conversation."
+        });
+    }
+  };
+
   const getParticipantDetails = (senderId: string) => {
     if (!chatDetails) return { name: "Loading...", avatar: "" };
     return {
@@ -131,17 +206,53 @@ export default function ChatPage() {
         avatar: chatDetails.userAvatars[senderId] || "",
     }
   }
-  
+
   const otherUserId = chatDetails && Object.keys(chatDetails.userNames).find(userId => userId !== currentUser?.uid);
   const otherUserName = otherUserId ? getParticipantDetails(otherUserId).name : 'Chat';
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] bg-card rounded-xl border">
-      <div className="flex items-center p-4 border-b">
-        <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
-            <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h2 className="text-xl font-bold">{otherUserName}</h2>
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
+                <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h2 className="text-xl font-bold">{otherUserName}</h2>
+        </div>
+         <AlertDialog>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-5 w-5" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <AlertDialogTrigger asChild>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete Conversation</span>
+                        </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this entire conversation.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        className="bg-destructive hover:bg-destructive/90"
+                        onClick={handleDeleteConversation}
+                    >
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {isLoading ? (
@@ -163,15 +274,27 @@ export default function ChatPage() {
                      <AvatarFallback>{senderDetails.name.charAt(0)}</AvatarFallback>
                    </Avatar>
                 )}
-                <div className="flex flex-col">
+                <div className="flex flex-col max-w-[80%]">
                   <div
-                    className={`rounded-lg p-3 max-w-xs ${
+                    className={`rounded-lg p-2 ${
                       isCurrentUser
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted"
                     }`}
                   >
-                    <p className="text-sm">{message.text}</p>
+                     {message.imageUrl ? (
+                        <a href={message.imageUrl} target="_blank" rel="noopener noreferrer">
+                            <Image
+                                src={message.imageUrl}
+                                alt="Chat image"
+                                width={300}
+                                height={300}
+                                className="rounded-md object-cover cursor-pointer"
+                            />
+                        </a>
+                    ) : (
+                        <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                    )}
                   </div>
                   <p className={`text-xs text-muted-foreground mt-1 ${isCurrentUser ? 'text-right' : 'text-left'}`}>
                      {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -191,6 +314,22 @@ export default function ChatPage() {
       </div>
       <div className="p-4 border-t">
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+            >
+                {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
+            </Button>
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                className="hidden"
+                accept="image/*"
+            />
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -205,3 +344,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
