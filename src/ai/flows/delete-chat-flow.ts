@@ -11,15 +11,13 @@ import { z } from 'zod';
 import { getFirestore, Query } from 'firebase-admin/firestore';
 import { initializeApp, getApps, App } from 'firebase-admin/app';
 
-// Ensure Firebase Admin is initialized
-let adminApp: App;
-if (!getApps().length) {
-  adminApp = initializeApp();
-} else {
-  adminApp = getApps()[0];
+// Helper function to initialize Firebase Admin if not already done
+function ensureFirebaseAdmin() {
+  if (getApps().length > 0) {
+    return getApps()[0];
+  }
+  return initializeApp();
 }
-
-const db = getFirestore(adminApp);
 
 const DeleteChatInputSchema = z.string().describe("The ID of the chat to delete.");
 export type DeleteChatInput = z.infer<typeof DeleteChatInputSchema>;
@@ -29,7 +27,7 @@ export async function deleteChat(chatId: DeleteChatInput): Promise<void> {
 }
 
 // Helper function to delete a collection in batches
-async function deleteCollection(collectionPath: string, batchSize: number): Promise<void> {
+async function deleteCollection(db: FirebaseFirestore.Firestore, collectionPath: string, batchSize: number): Promise<void> {
   const collectionRef = db.collection(collectionPath);
   let query: Query = collectionRef.orderBy('__name__').limit(batchSize);
 
@@ -58,13 +56,17 @@ const deleteChatFlow = ai.defineFlow(
     if (!chatId) {
       throw new Error("Chat ID is required.");
     }
+    
+    const adminApp = ensureFirebaseAdmin();
+    const db = getFirestore(adminApp);
 
     try {
       const messagesPath = `chats/${chatId}/messages`;
-      await deleteCollection(messagesPath, 50);
+      await deleteCollection(db, messagesPath, 50);
 
       // After deleting the subcollection, delete the main chat document
-      await db.collection('chats').doc(chatId).delete();
+      const chatDocRef = db.collection('chats').doc(chatId);
+      await chatDocRef.delete();
 
     } catch (error) {
       console.error("Error deleting chat in flow:", error);
