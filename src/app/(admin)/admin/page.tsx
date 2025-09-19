@@ -31,6 +31,8 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { SchoolLogo } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -152,12 +154,55 @@ export default function AdminDashboardPage() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                 <div className="flex items-center justify-center">
-                    <Avatar className="h-24 w-24">
-                        <AvatarImage src={photoURL || undefined} alt={form.getValues("name")} />
-                        <AvatarFallback>{form.getValues("name")?.charAt(0) || 'A'}</AvatarFallback>
-                    </Avatar>
-                </div>
+                <FormField
+                  control={form.control}
+                  name="photoURL"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col items-center">
+                      <FormLabel>Profile Picture</FormLabel>
+                      <FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button type="button" className="relative">
+                                <Avatar className="h-24 w-24">
+                                    <AvatarImage src={photoURL || undefined} alt={form.getValues("name")} />
+                                    <AvatarFallback>{form.getValues("name")?.charAt(0) || 'A'}</AvatarFallback>
+                                </Avatar>
+                                <div className="absolute bottom-0 right-0 rounded-full bg-primary p-1">
+                                    <Loader2 className="h-4 w-4 text-primary-foreground" />
+                                </div>
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <ScrollArea className="h-72 w-96">
+                                <div className="p-4 grid grid-cols-5 gap-2">
+                                  {avatarOptions.map((url) => (
+                                    <button
+                                      type="button"
+                                      key={url}
+                                      className={cn(
+                                        "rounded-full transition-all",
+                                        field.value === url
+                                          ? "ring-2 ring-primary ring-offset-2"
+                                          : "hover:scale-105"
+                                      )}
+                                      onClick={() => field.onChange(url)}
+                                    >
+                                      <Avatar className="h-16 w-16">
+                                        <AvatarImage src={url} alt="Avatar" />
+                                        <AvatarFallback>AV</AvatarFallback>
+                                      </Avatar>
+                                    </button>
+                                  ))}
+                                </div>
+                            </ScrollArea>
+                          </PopoverContent>
+                        </Popover>
+                      </FormControl>
+                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="name"
@@ -181,38 +226,6 @@ export default function AdminDashboardPage() {
                         <Input placeholder="Your email" {...field} disabled />
                       </FormControl>
                       <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="photoURL"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Profile Picture</FormLabel>
-                      <FormControl>
-                        <div className="grid grid-cols-10 gap-2">
-                          {avatarOptions.map((url) => (
-                            <button
-                              type="button"
-                              key={url}
-                              className={cn(
-                                "rounded-full transition-all",
-                                field.value === url
-                                  ? "ring-2 ring-primary ring-offset-2"
-                                  : "hover:scale-105"
-                              )}
-                              onClick={() => field.onChange(url)}
-                            >
-                              <Avatar className="h-16 w-16">
-                                <AvatarImage src={url} alt="Avatar" />
-                                <AvatarFallback>AV</AvatarFallback>
-                              </Avatar>
-                            </button>
-                          ))}
-                        </div>
-                      </FormControl>
-                       <FormMessage />
                     </FormItem>
                   )}
                 />
