@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { SchoolLogo } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -40,6 +41,9 @@ const profileFormSchema = z.object({
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+const avatarOptions = Array.from({ length: 10 }, (_, i) => `https://picsum.photos/seed/avatar${i + 1}/200`);
+
 
 export default function AdminDashboardPage() {
   const { toast } = useToast();
@@ -185,11 +189,30 @@ export default function AdminDashboardPage() {
                   name="photoURL"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Profile Picture URL</FormLabel>
+                      <FormLabel>Profile Picture</FormLabel>
                       <FormControl>
-                        <Input placeholder="https://example.com/image.png" {...field} />
+                        <div className="grid grid-cols-5 gap-2">
+                          {avatarOptions.map((url) => (
+                            <button
+                              type="button"
+                              key={url}
+                              className={cn(
+                                "rounded-full transition-all",
+                                field.value === url
+                                  ? "ring-2 ring-primary ring-offset-2"
+                                  : "hover:scale-105"
+                              )}
+                              onClick={() => field.onChange(url)}
+                            >
+                              <Avatar className="h-16 w-16">
+                                <AvatarImage src={url} alt="Avatar" />
+                                <AvatarFallback>AV</AvatarFallback>
+                              </Avatar>
+                            </button>
+                          ))}
+                        </div>
                       </FormControl>
-                      <FormMessage />
+                       <FormMessage />
                     </FormItem>
                   )}
                 />
