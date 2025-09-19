@@ -166,7 +166,7 @@ export default function ShopPage() {
     defaultValues: {
         studentName: "",
         studentClass: "",
-        age: "" as any,
+        age: "",
         phoneNumber: "",
         address: "",
         rollNumber: "",
@@ -780,5 +780,3 @@ ${cartItemsText}
     </div>
   );
 }
-
-    
