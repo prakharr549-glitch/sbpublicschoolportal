@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -55,7 +56,9 @@ import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 const productFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -122,6 +125,8 @@ export default function ShopPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [cart, setCart] = useState<Product[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -215,7 +220,6 @@ export default function ShopPage() {
       };
 
       if (isDefaultProduct) {
-        // This is a default product, so create a new document in Firestore
         await addDoc(collection(db, "products"), {
           ...productData,
           createdAt: Timestamp.now(),
@@ -225,7 +229,6 @@ export default function ShopPage() {
           description: `${data.name} has been added to the shop.`,
         });
       } else {
-        // This is an existing product, so update it
         const productRef = doc(db, "products", editingProduct.id);
         await updateDoc(productRef, productData);
         toast({
@@ -272,6 +275,30 @@ export default function ShopPage() {
     setEditingProduct(product);
     setIsEditDialogOpen(true);
   };
+  
+  const handleAddToCart = (product: Product) => {
+    setCart(prevCart => [...prevCart, product]);
+    toast({
+        title: "Added to Cart",
+        description: `${product.name} has been added to your cart.`,
+    });
+  };
+
+  const handleRemoveFromCart = (productId: string) => {
+    setCart(prevCart => {
+        const productIndex = prevCart.findIndex(p => p.id === productId);
+        if (productIndex > -1) {
+            const newCart = [...prevCart];
+            newCart.splice(productIndex, 1);
+            return newCart;
+        }
+        return prevCart;
+    });
+  };
+
+  const getCartTotal = () => {
+    return cart.reduce((total, product) => total + product.price, 0);
+  };
 
 
   const isLoading = authLoading || isDataLoading;
@@ -311,7 +338,7 @@ export default function ShopPage() {
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price (in Rupees)</FormLabel>
+                <FormLabel>Price (in INR)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" placeholder="e.g., 300" {...field} />
                 </FormControl>
@@ -343,36 +370,92 @@ export default function ShopPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">
           School Shop
         </h1>
-        {user && (
-           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
-                  <MoreHorizontal className="h-4 w-4" />
+        <div className="flex items-center gap-2">
+            <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon" className="relative">
+                  <ShoppingCart className="h-4 w-4" />
+                  {cart.length > 0 && (
+                    <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 justify-center rounded-full p-0">
+                      {cart.length}
+                    </Badge>
+                  )}
+                  <span className="sr-only">Open Cart</span>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Shop Actions</DropdownMenuLabel>
-                <DialogTrigger asChild>
-                  <DropdownMenuItem>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    <span>Add Product</span>
-                  </DropdownMenuItem>
-                </DialogTrigger>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Add New Product</DialogTitle>
-                <DialogDescription>
-                  Fill in the product details below.
-                </DialogDescription>
-              </DialogHeader>
-              {renderForm(false)}
-            </DialogContent>
-           </Dialog>
-        )}
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Your Shopping Cart</DialogTitle>
+                  <DialogDescription>
+                    Review the items in your cart below.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-4">
+                  {cart.length === 0 ? (
+                    <p className="text-center text-muted-foreground">Your cart is empty.</p>
+                  ) : (
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4">
+                      {cart.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">INR {item.price.toFixed(2)}</p>
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => handleRemoveFromCart(item.id)}>
+                            <X className="h-4 w-4" />
+                            <span className="sr-only">Remove item</span>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {cart.length > 0 && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="flex justify-between font-bold text-lg">
+                      <p>Total</p>
+                      <p>INR {getCartTotal().toFixed(2)}</p>
+                    </div>
+                    <DialogFooter>
+                        <Button className="w-full">Proceed to Checkout</Button>
+                    </DialogFooter>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {user && (
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                    <span className="sr-only">Open menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Shop Actions</DropdownMenuLabel>
+                    <DialogTrigger asChild>
+                    <DropdownMenuItem>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        <span>Add Product</span>
+                    </DropdownMenuItem>
+                    </DialogTrigger>
+                </DropdownMenuContent>
+                </DropdownMenu>
+                <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Add New Product</DialogTitle>
+                    <DialogDescription>
+                    Fill in the product details below.
+                    </DialogDescription>
+                </DialogHeader>
+                {renderForm(false)}
+                </DialogContent>
+            </Dialog>
+            )}
+        </div>
       </div>
       
       <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
@@ -454,7 +537,7 @@ export default function ShopPage() {
                          <p className="text-2xl font-bold">INR {item.price.toFixed(2)}</p>
                     </CardContent>
                     <CardFooter>
-                         <Button className="w-full">Add to Cart</Button>
+                         <Button className="w-full" onClick={() => handleAddToCart(item as Product)}>Add to Cart</Button>
                     </CardFooter>
                 </Card>
                 ))}
