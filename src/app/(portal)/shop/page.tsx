@@ -431,7 +431,6 @@ export default function ShopPage() {
         </h1>
         {user && (
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            {/* The trigger button has been removed as per the user's request */}
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add New Product</DialogTitle>
@@ -533,3 +532,5 @@ export default function ShopPage() {
     </div>
   );
 }
+
+    
