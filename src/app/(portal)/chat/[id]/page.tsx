@@ -74,7 +74,8 @@ export default function ChatPage() {
         if (doc.exists()) {
             setChatDetails(doc.data() as ChatDetails);
         } else {
-            // If chat is deleted, redirect away.
+            // If chat is deleted, redirect away. This can be triggered
+            // by the deleteChat flow.
             toast({
                 title: "Chat deleted",
                 description: "This conversation no longer exists.",
@@ -158,7 +159,8 @@ export default function ChatPage() {
   const handleDeleteConversation = async () => {
     try {
         await deleteChat(chatId);
-        // The useEffect hook will handle the redirect.
+        // The snapshot listener in useEffect will detect the deletion
+        // and redirect the user.
     } catch (error) {
         console.error("Error deleting conversation:", error);
         toast({
