@@ -15,7 +15,7 @@ import { SchoolLogo } from "@/components/icons";
 const navItems = [
   { href: "/driver-dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/driver/route", label: "My Route", icon: Map },
-  { href: "/driver/students", label: "Student List", icon: List },
+  { href: "/driver/student-list", label: "Student List", icon: List },
   { href: "/driver/notifications", label: "Notifications", icon: Bell },
 ];
 

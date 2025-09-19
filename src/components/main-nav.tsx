@@ -12,6 +12,7 @@ import {
   UserCog,
   User,
   Truck,
+  Image as ImageIcon,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/shop", label: "Shop", icon: ShoppingCart },
   { href: "/about", label: "About Us", icon: Info },
   { href: "/homework", label: "Homework", icon: BookOpen },
+  { href: "/gallery", label: "Gallery", icon: ImageIcon },
 ];
 
 const userRoleNavItems = [
