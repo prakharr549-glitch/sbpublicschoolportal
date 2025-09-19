@@ -108,6 +108,8 @@ export default function StudentsPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isVerified, setIsVerified] = useState(false);
+  const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
+
 
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
@@ -147,8 +149,8 @@ export default function StudentsPage() {
 
     return () => unsubscribe();
   }, [toast, isVerified]);
-
-  const handlePasswordVerification = () => {
+  
+  const handleMainPasswordVerification = () => {
     if (passwordInput === '355995') {
       setIsVerified(true);
       setIsPasswordDialogOpen(false);
@@ -164,6 +166,26 @@ export default function StudentsPage() {
     }
     setIsPasswordDialogOpen(isOpen);
   };
+  
+  const handleActionPasswordVerification = () => {
+    if (passwordInput === '355995') {
+      if (protectedAction) {
+        protectedAction();
+      }
+      setIsPasswordDialogOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      setProtectedAction(null);
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+  
+  const requestPassword = (action: () => void) => {
+    setProtectedAction(() => action);
+    setIsPasswordDialogOpen(true);
+  }
+
 
   async function onSubmit(data: StudentFormValues) {
     try {
@@ -220,7 +242,7 @@ export default function StudentsPage() {
                         Please enter the password to view student information.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                <form onSubmit={(e) => { e.preventDefault(); handleMainPasswordVerification(); }}>
                     <div className="space-y-4 py-2 pb-4">
                         <div className="space-y-2">
                             <Label htmlFor="password">Password</Label>
@@ -253,13 +275,13 @@ export default function StudentsPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">
           Student Management
         </h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add New Student
-            </Button>
-          </DialogTrigger>
+        <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add New Student
+        </Button>
+      </div>
+
+       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Add New Student</DialogTitle>
@@ -349,7 +371,47 @@ export default function StudentsPage() {
             </Form>
           </DialogContent>
         </Dialog>
-      </div>
+        
+        <Dialog open={protectedAction !== null} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+              setPasswordInput('');
+              setPasswordError('');
+              setProtectedAction(null);
+          }
+          setIsPasswordDialogOpen(isOpen);
+      }}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Admin Access Required</DialogTitle>
+                <DialogDescription>
+                    Please enter the administrator password to continue.
+                </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); handleActionPasswordVerification(); }}>
+                <div className="space-y-4 py-2 pb-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password-action">Password</Label>
+                        <Input
+                            id="password-action"
+                            type="password"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" onClick={() => setProtectedAction(null)}>Cancel</Button>
+                    <Button type="submit">
+                        <Lock className="mr-2 h-4 w-4"/>
+                        Verify
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
+
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -422,7 +484,7 @@ export default function StudentsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   <span>Delete</span>
                                 </DropdownMenuItem>
@@ -440,7 +502,7 @@ export default function StudentsPage() {
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 className="bg-destructive hover:bg-destructive/90"
-                                onClick={() => handleDelete(student.id)}
+                                onClick={() => requestPassword(() => handleDelete(student.id))}
                               >
                                 Continue
                               </AlertDialogAction>
