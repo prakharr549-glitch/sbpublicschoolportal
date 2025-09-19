@@ -24,7 +24,6 @@ const navItems = [
   { href: "/shop", label: "Shop", icon: ShoppingCart },
   { href: "/about", label: "About Us", icon: Info },
   { href: "/homework", label: "Homework", icon: BookOpen },
-  { href: "/gallery", label: "Gallery", icon: ImageIcon },
 ];
 
 const userRoleNavItems = [
