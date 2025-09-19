@@ -53,11 +53,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
-import { addDoc, collection, onSnapshot, query, doc, deleteDoc, orderBy, limit, updateDoc, Timestamp } from "firebase/firestore";
+import { addDoc, collection, onSnapshot, query, doc, updateDoc, Timestamp, orderBy, limit } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { deleteProduct } from "@/ai/flows/delete-product-flow";
 
 const productFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -304,7 +305,7 @@ export default function ShopPage() {
       return;
     }
     try {
-      await deleteDoc(doc(db, "products", productId));
+      await deleteProduct(productId);
       toast({
         title: "Product Deleted",
         description: "The product has been successfully removed from the shop.",
@@ -565,27 +566,29 @@ ${cartItemsText}
                 </DialogDescription>
             </DialogHeader>
             <Form {...{} as any}>
-                <div className="space-y-4 py-2 pb-4">
-                    <div className="space-y-2">
-                        <FormLabel htmlFor="password">Password</FormLabel>
-                        <Input
-                            id="password"
-                            type="password"
-                            value={passwordInput}
-                            onChange={(e) => setPasswordInput(e.target.value)}
-                            placeholder="Enter password"
-                        />
-                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                <form>
+                    <div className="space-y-4 py-2 pb-4">
+                        <div className="space-y-2">
+                            <FormLabel htmlFor="password">Password</FormLabel>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={passwordInput}
+                                onChange={(e) => setPasswordInput(e.target.value)}
+                                placeholder="Enter password"
+                            />
+                            {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                        </div>
                     </div>
-                </div>
+                    <DialogFooter>
+                        <Button variant="outline" type="button" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                        <Button type="button" onClick={handlePasswordVerification}>
+                            <Lock className="mr-2 h-4 w-4"/>
+                            Verify
+                        </Button>
+                    </DialogFooter>
+                </form>
             </Form>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handlePasswordVerification}>
-                    <Lock className="mr-2 h-4 w-4"/>
-                    Verify
-                </Button>
-            </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -777,3 +780,5 @@ ${cartItemsText}
     </div>
   );
 }
+
+    
