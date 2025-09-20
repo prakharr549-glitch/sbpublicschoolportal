@@ -11,11 +11,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Phone, User, Truck } from "lucide-react";
+import { Loader2, MapPin, Phone, User, Truck, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useRouter } from "next/navigation";
+import { useAuthState } from "react-firebase-hooks/auth";
+
 
 type Driver = {
   id: string;
@@ -46,16 +55,36 @@ export default function TrackDriverPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const router = useRouter();
+  const [currentUser] = useAuthState(auth);
 
   useEffect(() => {
+    // We also need to fetch the driver's user account ID from the 'users' collection
+    // to enable internal chat. We can do this by matching the mobile number.
     const q = query(collection(db, "drivers"));
     const unsubscribe = onSnapshot(
       q,
-      (querySnapshot) => {
+      async (querySnapshot) => {
         const driversData: Driver[] = [];
-        querySnapshot.forEach((doc) => {
-          driversData.push({ id: doc.id, ...(doc.data() as Omit<Driver, 'id'>) });
-        });
+        const userPromises = [];
+
+        for (const docSnapshot of querySnapshot.docs) {
+            const driverData = docSnapshot.data();
+            const usersRef = collection(db, "users");
+            // Assuming driver's mobile is unique and stored in their user profile's 'phone' field
+            // Note: This assumes the 'users' collection has a 'phone' field to match.
+            // If the schema is different, this query needs adjustment.
+            const userQuery = query(usersRef, where("role", "==", "Driver"), where("name", "==", driverData.name));
+            userPromises.push(getDocs(userQuery).then(userSnapshot => {
+                 let userId = docSnapshot.id; // Fallback to driver doc id if no user found
+                 if (!userSnapshot.empty) {
+                    userId = userSnapshot.docs[0].id;
+                 }
+                 driversData.push({ id: userId, ...(driverData as Omit<Driver, 'id'>) });
+            }));
+        }
+
+        await Promise.all(userPromises);
         setDrivers(driversData);
         setIsLoading(false);
       },
@@ -79,6 +108,54 @@ export default function TrackDriverPage() {
         description: `Live tracking for ${driverName} is not yet implemented.`,
     });
   }
+
+  const handleCreateChat = async (otherUser: Driver) => {
+    if (!currentUser) return;
+
+    // Check if a user account exists for this driver to enable chat
+    const userDocRef = doc(db, "users", otherUser.id);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+        toast({
+            variant: "destructive",
+            title: "Chat Not Available",
+            description: "This driver does not have a chat-enabled user account.",
+        });
+        return;
+    }
+    const otherUserData = userDoc.data();
+
+    // Check if chat already exists
+    const sortedUsers = [currentUser.uid, otherUser.id].sort();
+    const existingChatQuery = query(
+      collection(db, "chats"),
+      where("users", "==", sortedUsers)
+    );
+
+    const existingChatSnapshot = await getDocs(existingChatQuery);
+
+    if (!existingChatSnapshot.empty) {
+      // Chat already exists, navigate to it
+      const chatId = existingChatSnapshot.docs[0].id;
+      router.push(`/chat/${chatId}`);
+    } else {
+      // Create new chat
+      const newChatRef = await addDoc(collection(db, "chats"), {
+        users: sortedUsers,
+        userNames: {
+          [currentUser.uid]: currentUser.displayName,
+          [otherUser.id]: otherUserData.name,
+        },
+        userAvatars: {
+          [currentUser.uid]: currentUser.photoURL || "",
+          [otherUser.id]: otherUserData.photoURL || "",
+        },
+        createdAt: serverTimestamp(),
+      });
+      router.push(`/chat/${newChatRef.id}`);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,12 +199,26 @@ export default function TrackDriverPage() {
                     <span className="sr-only">Call</span>
                    </a>
                 </Button>
-                <Button asChild variant="outline" size="sm">
-                    <a href={`https://wa.me/${driver.mobile}`} target="_blank" rel="noopener noreferrer">
-                        <WhatsAppIcon />
-                        <span className="sr-only">WhatsApp</span>
-                    </a>
-                </Button>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <MessageSquare />
+                             <span className="sr-only">Chat</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                            <a href={`https://wa.me/${driver.mobile}`} target="_blank" rel="noopener noreferrer">
+                                <WhatsAppIcon className="mr-2 h-4 w-4" />
+                                <span>WhatsApp</span>
+                            </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateChat(driver)}>
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            <span>School Chat</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
                 <Button size="sm" onClick={() => handleTrackClick(driver.name)}>
                     <MapPin className="mr-2 h-4 w-4" />
                     Track
