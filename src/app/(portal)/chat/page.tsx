@@ -26,7 +26,6 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { deleteAllUserChats } from "@/ai/flows/delete-all-chats-flow";
 
 
 type User = {
@@ -124,25 +123,6 @@ export default function ChatListPage() {
       router.push(`/chat/${newChatRef.id}`);
     }
   };
-
-  const handleDeleteAllConversations = async () => {
-    if (!currentUser) return;
-
-    try {
-        await deleteAllUserChats(currentUser.uid);
-        toast({
-            title: "All Chats Deleted",
-            description: "All of your conversations have been removed.",
-        });
-    } catch (error) {
-        console.error("Error deleting all conversations:", error);
-        toast({
-            variant: "destructive",
-            title: "Deletion Failed",
-            description: "Could not delete all conversations. Please try again."
-        });
-    }
-  }
   
   const filteredUsers = users.filter(user => 
     user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())
