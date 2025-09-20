@@ -1,20 +1,21 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // By default, deny all reads and writes
+    // Default deny all
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Allow authenticated users to manage their own user document
+    // Users can read all profiles, but only write to their own
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create, update: if request.auth.uid == userId;
     }
 
-    // Allow authenticated users to read public-facing collections
+    // Public collections are readable by any authenticated user
     match /admins/{docId} {
       allow read: if request.auth != null;
     }
@@ -25,7 +26,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
     match /students/{docId} {
-      allow read: if request.auth != null;
+        allow read: if request.auth != null;
     }
     match /announcements/{docId} {
       allow read: if request.auth != null;
@@ -37,25 +38,20 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
     
-    // Allow authenticated users to read driver locations
+    // Driver locations can be read by anyone authenticated, written only by the driver
     match /driverLocations/{driverId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth.uid == driverId;
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == driverId;
     }
 
-    // Secure the chat collection
+    // Chat collections
     match /chats/{chatId} {
-      // Only members can read/write chat metadata
-      allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
+      // Allow read/write access only to members of the chat
+      allow read, write: if request.auth.uid in resource.data.users;
 
-      // Rules for the messages subcollection
       match /messages/{messageId} {
-        // Only members of the chat can read messages
-        allow read: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
-        
-        // Only members of the chat can create messages, and only as themselves
-        allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users
-                      && request.resource.data.senderId == request.auth.uid;
+        // Allow read/write only to members of the parent chat
+        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
       }
     }
   }
