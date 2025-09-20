@@ -232,7 +232,7 @@ export default function ChatPage() {
                     className={`rounded-lg p-2 ${
                       isCurrentUser
                         ? "bg-primary text-primary-foreground"
-                        : "bg-pink-600 text-white"
+                        : "bg-green-600 text-white"
                     }`}
                   >
                     <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
