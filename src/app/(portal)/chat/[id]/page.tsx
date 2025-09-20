@@ -17,7 +17,7 @@ import {
   updateDoc,
   Timestamp,
 } from "firebase/firestore";
-import { Loader2, Send, ArrowLeft, MoreVertical, Trash2 } from "lucide-react";
+import { Loader2, Send, ArrowLeft, MoreVertical, Trash2, CheckCircle } from "lucide-react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter, useParams } from "next/navigation";
@@ -222,9 +222,14 @@ export default function ChatPage() {
                   >
                     <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
                   </div>
-                  <p className={`text-xs text-muted-foreground mt-1 ${isCurrentUser ? 'text-right' : 'text-left'}`}>
-                     {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  <div className={`flex items-center gap-1 mt-1 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                    <p className="text-xs text-muted-foreground">
+                        {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    {isCurrentUser && (
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                    )}
+                  </div>
                 </div>
                  {isCurrentUser && (
                    <Avatar className="h-8 w-8">
