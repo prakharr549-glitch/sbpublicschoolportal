@@ -241,7 +241,7 @@ export default function ResultsPage() {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="class"
@@ -282,7 +282,7 @@ export default function ResultsPage() {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <FormField
                         control={form.control}
                         name="totalMarks"
@@ -310,7 +310,7 @@ export default function ResultsPage() {
                         )}
                         />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
                         name="rank"
@@ -476,7 +476,3 @@ export default function ResultsPage() {
     </div>
   );
 }
-
-  
-
-    

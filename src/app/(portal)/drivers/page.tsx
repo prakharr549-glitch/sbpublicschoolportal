@@ -225,7 +225,7 @@ export default function DriversPage() {
                     </FormItem>
                 )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                     control={form.control}
                     name="mobile"
@@ -341,91 +341,93 @@ export default function DriversPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Mobile</TableHead>
-                  <TableHead>Van No.</TableHead>
-                  <TableHead>Up Address</TableHead>
-                  <TableHead>Down Address</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {drivers.length > 0 ? (
-                  drivers.map((driver) => (
-                    <TableRow key={driver.id}>
-                      <TableCell className="font-medium">{driver.name}</TableCell>
-                      <TableCell>{driver.mobile}</TableCell>
-                      <TableCell>{driver.vanNo}</TableCell>
-                      <TableCell>{driver.upAddress}</TableCell>
-                      <TableCell>{driver.downAddress}</TableCell>
-                      <TableCell className="text-right">
-                      <AlertDialog>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                                <a href={`tel:${driver.mobile}`}>
-                                    <Phone className="mr-2 h-4 w-4" />
-                                    <span>Call</span>
-                                </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <a href={`https://wa.me/${driver.mobile}`} target="_blank" rel="noopener noreferrer">
-                                <WhatsAppIcon className="mr-2 h-4 w-4" />
-                                <span>WhatsApp</span>
-                                </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <AlertDialogTrigger asChild>
-                                <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onSelect={(e) => e.preventDefault()}
-                                >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Delete</span>
-                                </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the record for {driver.name}.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                                className="bg-destructive hover:bg-destructive/90"
-                                onClick={() => requestPassword(() => handleDelete(driver.id))}
-                            >
-                                Continue
-                            </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                        </AlertDialog>
+            <div className="w-full overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Mobile</TableHead>
+                    <TableHead>Van No.</TableHead>
+                    <TableHead>Up Address</TableHead>
+                    <TableHead>Down Address</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {drivers.length > 0 ? (
+                    drivers.map((driver) => (
+                      <TableRow key={driver.id}>
+                        <TableCell className="font-medium whitespace-nowrap">{driver.name}</TableCell>
+                        <TableCell>{driver.mobile}</TableCell>
+                        <TableCell>{driver.vanNo}</TableCell>
+                        <TableCell className="min-w-[200px]">{driver.upAddress}</TableCell>
+                        <TableCell className="min-w-[200px]">{driver.downAddress}</TableCell>
+                        <TableCell className="text-right">
+                        <AlertDialog>
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem asChild>
+                                  <a href={`tel:${driver.mobile}`}>
+                                      <Phone className="mr-2 h-4 w-4" />
+                                      <span>Call</span>
+                                  </a>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                  <a href={`https://wa.me/${driver.mobile}`} target="_blank" rel="noopener noreferrer">
+                                  <WhatsAppIcon className="mr-2 h-4 w-4" />
+                                  <span>WhatsApp</span>
+                                  </a>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onSelect={(e) => e.preventDefault()}
+                                  >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <span>Delete</span>
+                                  </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the record for {driver.name}.
+                              </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                  className="bg-destructive hover:bg-destructive/90"
+                                  onClick={() => requestPassword(() => handleDelete(driver.id))}
+                              >
+                                  Continue
+                              </AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        No drivers found.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      No drivers found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
