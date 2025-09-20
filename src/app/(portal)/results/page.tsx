@@ -41,6 +41,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -49,20 +50,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, PlusCircle, Download, Upload, Trash2, Search } from "lucide-react";
+import { Loader2, Upload, Trash2, Search, Award } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db, auth, storage } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, orderBy, Timestamp, doc, deleteDoc, getDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
-import Link from "next/link";
 
 const resultFormSchema = z.object({
   studentName: z.string().min(2, "Student name must be at least 2 characters."),
   class: z.string().min(1, "Class is required."),
   rollNumber: z.string().min(1, "Roll number is required."),
   subject: z.string().min(2, "Subject is required."),
-  resultFile: z.instanceof(File).refine(file => file.size > 0, "A file is required."),
+  totalMarks: z.preprocess(
+    (a) => parseInt(z.string().parse(a), 10),
+    z.number().positive("Total marks must be a positive number.")
+  ),
+  gainedMarks: z.preprocess(
+    (a) => parseInt(z.string().parse(a), 10),
+    z.number().nonnegative("Gained marks must be a non-negative number.")
+  ),
+  behaviorDescription: z.string().min(10, "Description must be at least 10 characters.").optional(),
 });
 
 type ResultFormValues = z.infer<typeof resultFormSchema>;
@@ -73,8 +80,9 @@ type Result = {
   class: string;
   rollNumber: string;
   subject: string;
-  fileUrl: string;
-  fileName: string;
+  totalMarks: number;
+  gainedMarks: number;
+  behaviorDescription?: string;
   uploadedAt: Timestamp;
 };
 
@@ -87,17 +95,18 @@ export default function ResultsPage() {
   const [user, authLoading] = useAuthState(auth);
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  const form = useForm<Omit<ResultFormValues, 'resultFile'>>({
-    resolver: zodResolver(resultFormSchema.omit({ resultFile: true })),
+  const form = useForm<ResultFormValues>({
+    resolver: zodResolver(resultFormSchema),
     defaultValues: {
       studentName: "",
       class: "",
       rollNumber: "",
       subject: "",
+      totalMarks: 100,
+      gainedMarks: 0,
+      behaviorDescription: "",
     },
   });
-  const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -133,23 +142,12 @@ export default function ResultsPage() {
     return () => unsubscribe();
   }, [toast]);
 
-  async function onSubmit(data: Omit<ResultFormValues, 'resultFile'>) {
-    if (!file) {
-      setFileError("A result file is required.");
-      return;
-    }
-    setFileError(null);
+  async function onSubmit(data: ResultFormValues) {
     setIsUploading(true);
 
     try {
-      const storageRef = ref(storage, `results/${Date.now()}_${file.name}`);
-      const uploadTask = await uploadBytes(storageRef, file);
-      const fileUrl = await getDownloadURL(uploadTask.ref);
-
       await addDoc(collection(db, "results"), {
         ...data,
-        fileUrl,
-        fileName: file.name,
         uploadedAt: Timestamp.now(),
       });
 
@@ -158,7 +156,6 @@ export default function ResultsPage() {
         description: `Result for ${data.studentName} has been uploaded.`,
       });
       form.reset();
-      setFile(null);
       setIsDialogOpen(false);
     } catch (error) {
       console.error("Error uploading result: ", error);
@@ -172,15 +169,9 @@ export default function ResultsPage() {
     }
   }
   
-  async function handleDelete(result: Result) {
+  async function handleDelete(resultId: string) {
     try {
-      // Delete file from storage
-      const fileRef = ref(storage, result.fileUrl);
-      await deleteObject(fileRef);
-      
-      // Delete record from firestore
-      await deleteDoc(doc(db, "results", result.id));
-
+      await deleteDoc(doc(db, "results", resultId));
       toast({
         title: "Result Deleted",
         description: "The result has been successfully removed.",
@@ -206,9 +197,9 @@ export default function ResultsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-            <Download className="h-8 w-8 text-primary" />
+            <Award className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold tracking-tight font-headline">
-                Download Result
+                Student Results
             </h1>
         </div>
         {canManage && (
@@ -224,11 +215,11 @@ export default function ResultsPage() {
               <DialogHeader>
                 <DialogTitle>Upload New Result</DialogTitle>
                 <DialogDescription>
-                  Fill in the student's details and upload the result file.
+                  Fill in the student's details and marks.
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                   <FormField
                     control={form.control}
                     name="studentName"
@@ -283,13 +274,47 @@ export default function ResultsPage() {
                       </FormItem>
                     )}
                   />
-                  <FormItem>
-                    <FormLabel>Result File</FormLabel>
-                    <FormControl>
-                      <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-                    </FormControl>
-                    {fileError && <p className="text-sm font-medium text-destructive">{fileError}</p>}
-                  </FormItem>
+                  <div className="grid grid-cols-2 gap-4">
+                     <FormField
+                        control={form.control}
+                        name="totalMarks"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Total Marks</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="e.g., 100" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="gainedMarks"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Gained Marks</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="e.g., 85" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                  </div>
+                   <FormField
+                    control={form.control}
+                    name="behaviorDescription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Behavior Description (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="e.g., Excellent participation in class activities." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                     <Button type="submit" disabled={isUploading}>
@@ -329,6 +354,8 @@ export default function ResultsPage() {
                   <TableHead>Class</TableHead>
                   <TableHead>Roll No.</TableHead>
                   <TableHead>Subject/Exam</TableHead>
+                  <TableHead>Marks</TableHead>
+                  <TableHead>Behavior</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -340,13 +367,10 @@ export default function ResultsPage() {
                       <TableCell>{result.class}</TableCell>
                       <TableCell>{result.rollNumber}</TableCell>
                       <TableCell>{result.subject}</TableCell>
+                      <TableCell>{result.gainedMarks} / {result.totalMarks}</TableCell>
+                      <TableCell>{result.behaviorDescription || 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                            <Button asChild variant="outline" size="sm">
-                                <Link href={result.fileUrl} target="_blank" download>
-                                    <Download className="mr-2 h-4 w-4" /> Download
-                                </Link>
-                            </Button>
                             {canManage && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -365,7 +389,7 @@ export default function ResultsPage() {
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                                         <AlertDialogAction
                                             className="bg-destructive hover:bg-destructive/90"
-                                            onClick={() => handleDelete(result)}>
+                                            onClick={() => handleDelete(result.id)}>
                                             Delete
                                         </AlertDialogAction>
                                         </AlertDialogFooter>
@@ -378,7 +402,7 @@ export default function ResultsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       No results found.
                     </TableCell>
                   </TableRow>
@@ -392,5 +416,4 @@ export default function ResultsPage() {
   );
 }
 
-    
-    
+  

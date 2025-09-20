@@ -16,7 +16,7 @@ import {
   Image as ImageIcon,
   Radio,
   MessageSquare,
-  Download,
+  Award,
   Video,
 } from "lucide-react";
 
@@ -31,7 +31,7 @@ const navItems = [
   { href: "/homework", label: "Homework", icon: BookOpen },
   { href: "/livestream", label: "Live Stream", icon: Radio },
   { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "/results", label: "Download Result", icon: Download },
+  { href: "/results", label: "Results", icon: Award },
   { href: "/videos", label: "School Videos", icon: Video },
 ];
 
@@ -89,3 +89,5 @@ export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
     </nav>
   );
 }
+
+  
