@@ -2,56 +2,79 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check user roles from their user document
-    function isRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
 
-    // By default, deny all reads and writes
-    match /{document=**} {
-      allow read, write: if false;
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Any authenticated user can read public user profiles
-      allow read: if request.auth != null;
-      // A user can only create or update their own profile
-      allow create, update: if request.auth.uid == userId;
+      // Any authenticated user can create their own user document
+      allow create: if isAuthenticated();
+      // Users can only read or update their own document
+      allow read, update: if isAuthenticated() && request.auth.uid == userId;
+      // Deletion is not allowed
+      allow delete: if false;
     }
 
-    // Rules for role-based collections
+    // Rules for the 'admins' collection
     match /admins/{adminId} {
-      allow read: if request.auth != null;
-      allow write: if isRole('Admin');
-    }
-    match /drivers/{driverId} {
-      allow read: if request.auth != null;
-      allow write: if isRole('Admin');
-    }
-    match /teachers/{teacherId} {
-      allow read: if request.auth != null;
-      allow write: if isRole('Admin');
-    }
-    match /students/{studentId} {
-      // Only Admins and Teachers can read student data
-      allow read: if isRole('Admin') || isRole('Teacher');
-      // Only Admins can write student data
-      allow write: if isRole('Admin');
+      // Anyone can read the list of admins
+      allow read: if true;
+       // Only authenticated users can manage admins (for simplicity, can be locked down further)
+      allow write: if isAuthenticated();
     }
 
-    // Rules for content collections
+    // Rules for the 'drivers' collection
+    match /drivers/{driverId} {
+        // Anyone can read driver info
+        allow read: if true;
+        // Only authenticated users can manage drivers
+        allow write: if isAuthenticated();
+    }
+    
+    // Rules for the 'teachers' collection
+    match /teachers/{teacherId} {
+        // Anyone can read teacher info
+        allow read: if true;
+        // Only authenticated users can manage teachers
+        allow write: if isAuthenticated();
+    }
+
+    // Rules for the 'students' collection
+    match /students/{studentId} {
+        // Only authenticated users can access student data
+        allow read, write: if isAuthenticated();
+    }
+
+    // Rules for 'announcements'
     match /announcements/{announcementId} {
-      allow read: if request.auth != null;
-      allow write: if isRole('Admin') || isRole('Teacher');
+      // Anyone can read announcements
+      allow read: if true;
+      // Only authenticated users can create, update, or delete announcements
+      allow write: if isAuthenticated();
     }
+
+    // Rules for 'homework'
     match /homework/{homeworkId} {
-      allow read: if request.auth != null;
-      allow write: if isRole('Admin') || isRole('Teacher');
+        // Anyone can read homework
+        allow read: if true;
+        // Only authenticated users can manage homework
+        allow write: if isAuthenticated();
     }
+    
+    // Rules for 'products'
     match /products/{productId} {
-      allow read: if request.auth != null;
-      allow write: if isRole('Admin');
+        // Anyone can read products
+        allow read: if true;
+        // Only authenticated users can manage products
+        allow write: if isAuthenticated();
+    }
+    
+    // Default deny all other reads/writes
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

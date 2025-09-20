@@ -2,7 +2,7 @@
 "use client";
 
 import { useAuthState, useSignOut } from "react-firebase-hooks/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,12 +16,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Car } from "lucide-react";
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
 
 export function UserNav() {
   const router = useRouter();
   const [user, loading] = useAuthState(auth);
   const [signOut, isSigningOut] = useSignOut(auth);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchUserRole() {
+      if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          setUserRole(userDoc.data().role);
+        }
+      }
+    }
+    fetchUserRole();
+  }, [user]);
 
   const handleLogout = async () => {
     const success = await signOut();
@@ -66,6 +82,14 @@ export function UserNav() {
           <DropdownMenuItem asChild>
             <Link href="/profile">Profile</Link>
           </DropdownMenuItem>
+          {userRole === 'Driver' && (
+            <DropdownMenuItem asChild>
+              <Link href="/driver/route">
+                <Car className="mr-2 h-4 w-4" />
+                <span>Start Ride</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} disabled={isSigningOut}>
