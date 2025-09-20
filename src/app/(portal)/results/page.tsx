@@ -236,11 +236,11 @@ export default function ResultsPage() {
                     </div>
                     <FormField control={form.control} name="subject" render={({ field }) => ( <FormItem> <FormLabel>Subject / Exam Name</FormLabel> <FormControl> <Input placeholder="e.g., Final Term, Maths" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
                     <FormItem>
-                        <FormLabel>Result File</FormLabel>
-                        <FormControl>
-                            <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-                        </FormControl>
-                        {fileError && <p className="text-sm font-medium text-destructive">{fileError}</p>}
+                      <FormLabel>Result File</FormLabel>
+                      <FormControl>
+                          <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                      </FormControl>
+                      {fileError && <p className="text-sm font-medium text-destructive">{fileError}</p>}
                     </FormItem>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
