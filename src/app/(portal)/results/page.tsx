@@ -229,19 +229,67 @@ export default function ResultsPage() {
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                    <FormField control={form.control} name="studentName" render={({ field }) => ( <FormItem> <FormLabel>Student Name</FormLabel> <FormControl> <Input placeholder="e.g., John Doe" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField control={form.control} name="class" render={({ field }) => ( <FormItem> <FormLabel>Class</FormLabel> <FormControl> <Input placeholder="e.g., Grade 10" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                        <FormField control={form.control} name="rollNumber" render={({ field }) => ( <FormItem> <FormLabel>Roll Number</FormLabel> <FormControl> <Input placeholder="e.g., 21" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                    </div>
-                    <FormField control={form.control} name="subject" render={({ field }) => ( <FormItem> <FormLabel>Subject / Exam Name</FormLabel> <FormControl> <Input placeholder="e.g., Final Term, Maths" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                    <FormItem>
-                      <FormLabel>Result File</FormLabel>
-                      <FormControl>
-                          <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-                      </FormControl>
-                      {fileError && <p className="text-sm font-medium text-destructive">{fileError}</p>}
-                    </FormItem>
+                  <FormField
+                    control={form.control}
+                    name="studentName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Student Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="class"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Class</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Grade 10" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="rollNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Roll Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., 21" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="subject"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subject / Exam Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Final Term, Maths" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormItem>
+                    <FormLabel>Result File</FormLabel>
+                    <FormControl>
+                      <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                    </FormControl>
+                    {fileError && <p className="text-sm font-medium text-destructive">{fileError}</p>}
+                  </FormItem>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                     <Button type="submit" disabled={isUploading}>
@@ -344,4 +392,5 @@ export default function ResultsPage() {
   );
 }
 
+    
     
