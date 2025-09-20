@@ -1,13 +1,18 @@
+
 import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { UserNav } from "@/components/user-nav";
 import { MainNav } from "@/components/main-nav";
+import { DialogTitle as VisuallyHidden } from "@/components/ui/dialog";
+
 
 export function Header() {
   return (
@@ -21,6 +26,11 @@ export function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="flex flex-col pt-12">
+             <SheetHeader>
+                <SheetTitle>
+                    <VisuallyHidden>Navigation Menu</VisuallyHidden>
+                </SheetTitle>
+             </SheetHeader>
             <MainNav />
           </SheetContent>
         </Sheet>
