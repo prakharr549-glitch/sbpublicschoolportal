@@ -55,6 +55,8 @@ import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, orderBy, Timestamp, doc, deleteDoc, getDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 
 const resultFormSchema = z.object({
   studentName: z.string().min(2, "Student name must be at least 2 characters."),
@@ -70,6 +72,8 @@ const resultFormSchema = z.object({
     z.number().nonnegative("Gained marks must be a non-negative number.")
   ),
   behaviorDescription: z.string().min(10, "Description must be at least 10 characters.").optional(),
+  rank: z.string().optional(),
+  status: z.enum(["Pass", "Fail"], { required_error: "Please select a status." }),
 });
 
 type ResultFormValues = z.infer<typeof resultFormSchema>;
@@ -83,6 +87,8 @@ type Result = {
   totalMarks: number;
   gainedMarks: number;
   behaviorDescription?: string;
+  rank?: string;
+  status: "Pass" | "Fail";
   uploadedAt: Timestamp;
 };
 
@@ -105,6 +111,8 @@ export default function ResultsPage() {
       totalMarks: 100,
       gainedMarks: 0,
       behaviorDescription: "",
+      rank: "",
+      status: "Pass",
     },
   });
   const [isUploading, setIsUploading] = useState(false);
@@ -302,6 +310,51 @@ export default function ResultsPage() {
                         )}
                         />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="rank"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Rank (Optional)</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., 1st" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                     <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <FormControl>
+                                    <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex items-center space-x-4 pt-2"
+                                    >
+                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="Pass" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Pass</FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="Fail" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Fail</FormLabel>
+                                    </FormItem>
+                                    </RadioGroup>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                  </div>
                    <FormField
                     control={form.control}
                     name="behaviorDescription"
@@ -355,6 +408,8 @@ export default function ResultsPage() {
                   <TableHead>Roll No.</TableHead>
                   <TableHead>Subject/Exam</TableHead>
                   <TableHead>Marks</TableHead>
+                  <TableHead>Rank</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Behavior</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -368,6 +423,12 @@ export default function ResultsPage() {
                       <TableCell>{result.rollNumber}</TableCell>
                       <TableCell>{result.subject}</TableCell>
                       <TableCell>{result.gainedMarks} / {result.totalMarks}</TableCell>
+                      <TableCell>{result.rank || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Badge variant={result.status === 'Pass' ? 'secondary' : 'destructive'}>
+                            {result.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{result.behaviorDescription || 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -402,7 +463,7 @@ export default function ResultsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                       No results found.
                     </TableCell>
                   </TableRow>
@@ -417,3 +478,5 @@ export default function ResultsPage() {
 }
 
   
+
+    
