@@ -18,6 +18,12 @@ import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 type Driver = {
@@ -28,6 +34,23 @@ type Driver = {
   photoURL?: string; 
   email?: string;
 };
+
+const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+    </svg>
+  );
 
 export default function TrackDriverPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -44,7 +67,17 @@ export default function TrackDriverPage() {
         const driversData: Driver[] = [];
         for (const docSnapshot of querySnapshot.docs) {
           const driverData = docSnapshot.data();
-          driversData.push({ id: docSnapshot.id, ...(driverData as Omit<Driver, 'id'>) });
+          const userQuery = query(collection(db, "users"), where("role", "==", "Driver"), where("name", "==", driverData.name));
+          const userSnapshot = await getDocs(userQuery);
+          let photoURL: string | undefined = undefined;
+          let email: string | undefined = undefined;
+          if (!userSnapshot.empty) {
+            const userData = userSnapshot.docs[0].data();
+            photoURL = userData.photoURL;
+            email = userData.email;
+          }
+
+          driversData.push({ id: docSnapshot.id, ...(driverData as Omit<Driver, 'id' | 'photoURL' | 'email'>), photoURL, email });
         }
         setDrivers(driversData);
         setIsLoading(false);
@@ -167,10 +200,26 @@ export default function TrackDriverPage() {
                     <span className="sr-only">Call</span>
                    </a>
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleCreateChat(driver)}>
-                    <MessageSquare />
-                    <span className="sr-only">Chat</span>
-                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <MessageSquare />
+                            <span className="sr-only">Chat</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => handleCreateChat(driver)}>
+                            <MessageSquare className="mr-2 h-4 w-4"/>
+                            <span>School Chat</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <a href={`https://wa.me/${driver.mobile}`} target="_blank" rel="noopener noreferrer">
+                                <WhatsAppIcon className="mr-2 h-4 w-4" />
+                                <span>WhatsApp</span>
+                            </a>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
                 <Button size="sm" onClick={() => handleTrackClick(driver.name)}>
                     <MapPin className="mr-2 h-4 w-4" />
                     Track
