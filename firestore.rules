@@ -1,76 +1,94 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // By default, deny all reads and writes
+    // By default, deny all reads and writes.
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Allow authenticated users to read and write to their own user document
+    // User profiles
     match /users/{userId} {
+      // Any authenticated user can read any user's profile (needed for chat lists).
       allow read: if request.auth != null;
-      allow create, update: if request.auth.uid == userId;
+      // A user can only create, update, or delete their own profile.
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Allow authenticated users to list the users collection.
+    match /users {
+      allow list: if request.auth != null;
     }
 
-    // Allow authenticated users to read public collections
-    match /admins/{adminId} {
+    // Admins
+    match /admins/{docId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if false; // Managed server-side
+    }
+    match /admins {
+       allow list: if request.auth != null;
     }
 
-    match /teachers/{teacherId} {
+    // Teachers
+    match /teachers/{docId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if false; // Managed server-side
+    }
+     match /teachers {
+       allow list: if request.auth != null;
     }
 
-    match /drivers/{driverId} {
+    // Drivers
+    match /drivers/{docId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if false; // Managed server-side
+    }
+     match /drivers {
+       allow list: if request.auth != null;
     }
 
-    match /students/{studentId} {
+    // Students
+    match /students/{docId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if false; // Managed server-side
+    }
+     match /students {
+       allow list: if request.auth != null;
     }
 
-    match /announcements/{announcementId} {
+    // Announcements
+    match /announcements/{docId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if false; // Managed server-side
+    }
+     match /announcements {
+       allow list: if request.auth != null;
     }
 
-    match /homework/{homeworkId} {
+    // Homework
+    match /homework/{docId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if false; // Managed server-side
+    }
+     match /homework {
+       allow list: if request.auth != null;
     }
 
-    match /products/{productId} {
+    // Products
+    match /products/{docId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if false; // Managed server-side
+    }
+     match /products {
+       allow list: if request.auth != null;
     }
 
-    match /driverLocations/{driverId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == driverId;
-    }
-
-    // Rules for the 'chats' collection
+    // Chat
     match /chats/{chatId} {
-      // Allow read and write access only to members of the chat
+      // Allow read/write access to chat metadata only for members of the chat.
       allow read, write: if request.auth != null && request.auth.uid in resource.data.users;
 
-      // Rules for the 'messages' subcollection
+      // Messages subcollection
       match /messages/{messageId} {
-        // Allow read access to chat members
-        allow read: if request.auth != null && get(/databases/$(database)/documents/chats/$(chatId)).data.users[request.auth.uid] != null;
-        
-        // Allow write access to chat members, and validate the message data
-        allow create: if request.auth != null && get(/databases/$(database)/documents/chats/$(chatId)).data.users[request.auth.uid] != null
-                      && request.resource.data.senderId == request.auth.uid
-                      && request.resource.data.text is string
-                      && request.resource.data.text.size() > 0;
+        // Allow read/write access to messages only for chat members.
+        allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
       }
+    }
+     // Allow authenticated users to query the chats collection to find their own chats.
+    match /chats {
+      allow list: if request.auth != null;
     }
   }
 }
