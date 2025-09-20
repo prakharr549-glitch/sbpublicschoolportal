@@ -18,7 +18,7 @@ import {
   Timestamp,
   writeBatch,
 } from "firebase/firestore";
-import { Loader2, Send, ArrowLeft, MoreVertical, Trash2, CheckCheck } from "lucide-react";
+import { Loader2, Send, ArrowLeft, MoreVertical, Trash2 } from "lucide-react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter, useParams } from "next/navigation";
@@ -242,9 +242,6 @@ export default function ChatPage() {
                     <p className="text-xs text-muted-foreground">
                         {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
-                    {isCurrentUser && (
-                        <CheckCheck className={cn("h-4 w-4", isReadByOther ? "text-green-500" : "text-muted-foreground/70")} />
-                    )}
                   </div>
                 </div>
                  {isCurrentUser && (
