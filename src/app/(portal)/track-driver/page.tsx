@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, MapPin, Phone, User, Truck, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
-import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     DropdownMenu,
@@ -59,32 +59,15 @@ export default function TrackDriverPage() {
   const [currentUser] = useAuthState(auth);
 
   useEffect(() => {
-    // We also need to fetch the driver's user account ID from the 'users' collection
-    // to enable internal chat. We can do this by matching the mobile number.
     const q = query(collection(db, "drivers"));
     const unsubscribe = onSnapshot(
       q,
       async (querySnapshot) => {
         const driversData: Driver[] = [];
-        const userPromises = [];
-
         for (const docSnapshot of querySnapshot.docs) {
-            const driverData = docSnapshot.data();
-            const usersRef = collection(db, "users");
-            // Assuming driver's mobile is unique and stored in their user profile's 'phone' field
-            // Note: This assumes the 'users' collection has a 'phone' field to match.
-            // If the schema is different, this query needs adjustment.
-            const userQuery = query(usersRef, where("role", "==", "Driver"), where("name", "==", driverData.name));
-            userPromises.push(getDocs(userQuery).then(userSnapshot => {
-                 let userId = docSnapshot.id; // Fallback to driver doc id if no user found
-                 if (!userSnapshot.empty) {
-                    userId = userSnapshot.docs[0].id;
-                 }
-                 driversData.push({ id: userId, ...(driverData as Omit<Driver, 'id'>) });
-            }));
+          const driverData = docSnapshot.data();
+          driversData.push({ id: docSnapshot.id, ...(driverData as Omit<Driver, 'id'>) });
         }
-
-        await Promise.all(userPromises);
         setDrivers(driversData);
         setIsLoading(false);
       },
@@ -112,11 +95,12 @@ export default function TrackDriverPage() {
   const handleCreateChat = async (otherUser: Driver) => {
     if (!currentUser) return;
 
-    // Check if a user account exists for this driver to enable chat
-    const userDocRef = doc(db, "users", otherUser.id);
-    const userDoc = await getDoc(userDocRef);
+    // Find the driver's user account in the 'users' collection to get their UID for chat
+    const usersRef = collection(db, "users");
+    const userQuery = query(usersRef, where("role", "==", "Driver"), where("name", "==", otherUser.name));
+    const userSnapshot = await getDocs(userQuery);
 
-    if (!userDoc.exists()) {
+    if (userSnapshot.empty) {
         toast({
             variant: "destructive",
             title: "Chat Not Available",
@@ -124,10 +108,12 @@ export default function TrackDriverPage() {
         });
         return;
     }
-    const otherUserData = userDoc.data();
+    const driverUserDoc = userSnapshot.docs[0];
+    const driverUserId = driverUserDoc.id;
+    const driverUserData = driverUserDoc.data();
 
     // Check if chat already exists
-    const sortedUsers = [currentUser.uid, otherUser.id].sort();
+    const sortedUsers = [currentUser.uid, driverUserId].sort();
     const existingChatQuery = query(
       collection(db, "chats"),
       where("users", "==", sortedUsers)
@@ -145,11 +131,11 @@ export default function TrackDriverPage() {
         users: sortedUsers,
         userNames: {
           [currentUser.uid]: currentUser.displayName,
-          [otherUser.id]: otherUserData.name,
+          [driverUserId]: driverUserData.name,
         },
         userAvatars: {
           [currentUser.uid]: currentUser.photoURL || "",
-          [otherUser.id]: otherUserData.photoURL || "",
+          [driverUserId]: driverUserData.photoURL || "",
         },
         createdAt: serverTimestamp(),
       });
