@@ -22,6 +22,7 @@ import {
   serverTimestamp,
   QueryConstraint,
   doc,
+  getDoc,
 } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -216,5 +217,3 @@ export default function NewChatPage() {
     </div>
   );
 }
-
-    
