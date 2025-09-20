@@ -43,6 +43,7 @@ type Driver = {
   vanNo: string;
   photoURL?: string; 
   email?: string;
+  uid?: string;
 };
 
 type DriverLocation = {
@@ -93,15 +94,19 @@ export default function TrackDriverPage() {
           const driverData = docSnapshot.data();
           const userQuery = query(collection(db, "users"), where("role", "==", "Driver"), where("name", "==", driverData.name));
           const userSnapshot = await getDocs(userQuery);
+          
           let photoURL: string | undefined = undefined;
           let email: string | undefined = undefined;
+          let uid: string | undefined = undefined;
+
           if (!userSnapshot.empty) {
             const userData = userSnapshot.docs[0].data();
+            uid = userSnapshot.docs[0].id;
             photoURL = userData.photoURL;
             email = userData.email;
           }
 
-          driversData.push({ id: docSnapshot.id, ...(driverData as Omit<Driver, 'id' | 'photoURL' | 'email'>), photoURL, email });
+          driversData.push({ id: docSnapshot.id, ...(driverData as Omit<Driver, 'id' | 'photoURL' | 'email' | 'uid'>), photoURL, email, uid });
         }
         setDrivers(driversData);
         setIsLoading(false);
@@ -121,57 +126,38 @@ export default function TrackDriverPage() {
   }, [toast]);
   
   useEffect(() => {
-    if (!trackingDriver || !isTrackingDialogOpen) return;
+    if (!trackingDriver || !isTrackingDialogOpen || !trackingDriver.uid) {
+        setDriverLocation(null);
+        return;
+    };
 
-    const findDriverUser = async () => {
-        if (!trackingDriver.email) return null;
-        const q = query(collection(db, "users"), where("email", "==", trackingDriver.email), where("role", "==", "Driver"));
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-            return snapshot.docs[0].id;
-        }
-        return null;
-    }
-    
-    let unsubscribe: (() => void) | undefined;
-
-    const startListening = async () => {
-        setIsLocationLoading(true);
-        const driverUid = await findDriverUser();
-
-        if (!driverUid) {
+    setIsLocationLoading(true);
+    const locationDocRef = doc(db, "driverLocations", trackingDriver.uid);
+    const unsubscribe = onSnapshot(locationDocRef, (doc) => {
+        if (doc.exists()) {
+            setDriverLocation(doc.data() as DriverLocation);
+        } else {
             setDriverLocation(null);
-            setIsLocationLoading(false);
-            return;
         }
-
-        const locationDocRef = doc(db, "driverLocations", driverUid);
-        unsubscribe = onSnapshot(locationDocRef, (doc) => {
-            if (doc.exists()) {
-                setDriverLocation(doc.data() as DriverLocation);
-            } else {
-                setDriverLocation(null);
-            }
-            setIsLocationLoading(false);
-        }, (error) => {
-            console.error("Error fetching location:", error);
-            setDriverLocation(null);
-            setIsLocationLoading(false);
-        });
-    }
-
-    startListening();
+        setIsLocationLoading(false);
+    }, (error) => {
+        console.error("Error fetching location:", error);
+        setDriverLocation(null);
+        setIsLocationLoading(false);
+    });
 
     return () => {
-        if (unsubscribe) {
-            unsubscribe();
-        }
+        unsubscribe();
     }
   }, [trackingDriver, isTrackingDialogOpen]);
 
-  const handleCreateChat = async () => {
-    if (!currentUser) return;
-    router.push('/chat');
+  const handleCreateChat = async (driver: Driver) => {
+    if (!currentUser || !driver.uid) {
+        toast({ title: "Error", description: "Driver user account not found for chat.", variant: "destructive" });
+        return;
+    };
+
+    router.push(`/chat`);
   };
   
   const handleTrackClick = (driver: Driver) => {
@@ -229,7 +215,7 @@ export default function TrackDriverPage() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={handleCreateChat}>
+                        <DropdownMenuItem onSelect={() => handleCreateChat(driver)}>
                             <MessageSquare className="mr-2 h-4 w-4"/>
                             <span>School Chat</span>
                         </DropdownMenuItem>
