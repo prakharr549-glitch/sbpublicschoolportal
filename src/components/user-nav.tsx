@@ -84,7 +84,7 @@ export function UserNav() {
           </DropdownMenuItem>
           {userRole === 'Driver' && (
             <DropdownMenuItem asChild>
-              <Link href="/driver/route">
+              <Link href="/route">
                 <Car className="mr-2 h-4 w-4" />
                 <span>Start Ride</span>
               </Link>
