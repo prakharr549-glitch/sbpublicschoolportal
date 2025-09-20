@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, MapPin, Phone, User, Truck, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
-import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp, doc, getDoc, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, where, getDocs, doc, getDoc, Timestamp } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -24,6 +24,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import dynamic from 'next/dynamic';
+
+const Map = dynamic(() => import('@/components/map'), { ssr: false });
 
 
 type Driver = {
@@ -68,6 +78,9 @@ export default function TrackDriverPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [currentUser] = useAuthState(auth);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<[number, number] | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
 
 
   useEffect(() => {
@@ -111,12 +124,17 @@ export default function TrackDriverPage() {
     return () => unsubscribe();
   }, [toast]);
   
-
   const handleCreateChat = async (driver: Driver) => {
-    if (!currentUser) return;
+    if (!currentUser || !driver.uid) {
+        toast({
+            title: "Chat Error",
+            description: "Cannot start chat. Driver is not a registered user.",
+            variant: "destructive"
+        });
+        return;
+    }
 
-    // Check if chat already exists
-    const sortedUsers = [currentUser.uid, driver.id].sort();
+    const sortedUsers = [currentUser.uid, driver.uid].sort();
     const existingChatQuery = query(
       collection(db, "chats"),
       where("users", "==", sortedUsers)
@@ -125,20 +143,18 @@ export default function TrackDriverPage() {
     const existingChatSnapshot = await getDocs(existingChatQuery);
 
     if (!existingChatSnapshot.empty) {
-      // Chat already exists, navigate to it
       const chatId = existingChatSnapshot.docs[0].id;
       router.push(`/chat/${chatId}`);
     } else {
-      // Create new chat
       const newChatRef = await addDoc(collection(db, "chats"), {
         users: sortedUsers,
         userNames: {
           [currentUser.uid]: currentUser.displayName,
-          [driver.id]: driver.name,
+          [driver.uid]: driver.name,
         },
         userAvatars: {
           [currentUser.uid]: currentUser.photoURL || "",
-          [driver.id]: driver.photoURL || "",
+          [driver.uid]: driver.photoURL || "",
         },
         createdAt: serverTimestamp(),
       });
@@ -153,6 +169,7 @@ export default function TrackDriverPage() {
     }
     
     setTrackingStates(prev => ({...prev, [driver.id]: true}));
+    setSelectedDriver(driver);
 
     try {
         const locationDocRef = doc(db, "driverLocations", driver.uid);
@@ -160,7 +177,8 @@ export default function TrackDriverPage() {
 
         if (locationDoc.exists()) {
             const data = locationDoc.data() as DriverLocation;
-            window.open(`https://www.google.com/maps/search/?api=1&query=${data.location.latitude},${data.location.longitude}`, '_blank');
+            setSelectedLocation([data.location.latitude, data.location.longitude]);
+            setIsMapOpen(true);
         } else {
             toast({ title: "Driver Offline", description: "This driver is not currently sharing their location." });
         }
@@ -180,6 +198,20 @@ export default function TrackDriverPage() {
           Track a Driver
         </h1>
       </div>
+
+       <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+            <DialogContent className="sm:max-w-3xl h-[80vh]">
+                <DialogHeader>
+                    <DialogTitle>Live Driver Location</DialogTitle>
+                    <DialogDescription>
+                        Tracking {selectedDriver?.name}. The location updates in real-time.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="h-full w-full rounded-lg overflow-hidden">
+                    {selectedLocation && <Map position={selectedLocation} />}
+                </div>
+            </DialogContent>
+        </Dialog>
 
       {isLoading ? (
         <div className="flex h-64 items-center justify-center">
@@ -222,7 +254,7 @@ export default function TrackDriverPage() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                         <DropdownMenuItem onSelect={() => router.push('/chat')}>
+                         <DropdownMenuItem onSelect={() => handleCreateChat(driver)}>
                             <MessageSquare className="mr-2 h-4 w-4"/>
                             <span>School Chat</span>
                         </DropdownMenuItem>
@@ -258,4 +290,3 @@ export default function TrackDriverPage() {
     </div>
   );
 }
-
