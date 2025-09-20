@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -32,7 +33,6 @@ const navItems = [
   { href: "/livestream", label: "Live Stream", icon: Radio },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/results", label: "Download Result", icon: Download },
-  { href: "/track-driver", label: "Track Driver", icon: MapPin },
   { href: "/videos", label: "School Videos", icon: Video },
 ];
 

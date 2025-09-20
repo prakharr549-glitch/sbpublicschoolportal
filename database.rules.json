@@ -1,7 +1,51 @@
+
 {
   "rules": {
-    ".read": false,
-    ".write": false,
+    ".read": "auth != null",
+    ".write": "auth != null",
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "$uid === auth.uid",
+        ".validate": "newData.hasChildren(['uid', 'name', 'email', 'role'])",
+        "uid": { ".validate": "newData.val() === $uid" },
+        "name": { ".validate": "newData.isString() && newData.val().length > 0" },
+        "email": { ".validate": "newData.isString() && newData.val().contains('@')" },
+        "role": { ".validate": "newData.isString()" },
+        "photoURL": { ".validate": "newData.isString()" }
+      }
+    },
+
+    "admins": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "teachers": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "drivers": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "students": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "announcements": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "homework": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "products": {
+      ".read": "auth != null",
+      ".write": false
+    },
+
     "chats": {
       "$chatId": {
         // Chat metadata can be read or written only by its members

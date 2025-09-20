@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -14,7 +15,6 @@ import { SchoolLogo } from "@/components/icons";
 
 const navItems = [
   { href: "/driver-dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/driver/route", label: "My Route", icon: Map },
   { href: "/driver/student-list", label: "Student List", icon: List },
   { href: "/driver/notifications", label: "Notifications", icon: Bell },
 ];
