@@ -17,7 +17,6 @@ import {
   onSnapshot,
   query,
   where,
-  orderBy,
   Timestamp,
 } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,8 +50,7 @@ export default function ChatListPage() {
 
     const q = query(
       collection(db, "chats"),
-      where("users", "array-contains", currentUser.uid),
-      orderBy("lastMessageTimestamp", "desc")
+      where("users", "array-contains", currentUser.uid)
     );
 
     const unsubscribe = onSnapshot(
@@ -62,6 +60,14 @@ export default function ChatListPage() {
         querySnapshot.forEach((doc) => {
           chatsData.push({ id: doc.id, ...(doc.data() as Omit<Chat, 'id'>) });
         });
+        
+        // Sort chats by lastMessageTimestamp on the client side
+        chatsData.sort((a, b) => {
+            const timeA = a.lastMessageTimestamp?.toMillis() || 0;
+            const timeB = b.lastMessageTimestamp?.toMillis() || 0;
+            return timeB - timeA;
+        });
+
         setChats(chatsData);
         setIsDataLoading(false);
       },
@@ -167,5 +173,3 @@ export default function ChatListPage() {
     </div>
   );
 }
-
-    
