@@ -1,49 +1,67 @@
-{
-  "rules": {
-    "service cloud.firestore": {
-      "match": "/databases/{database}/documents": {
+rules_version = '2';
 
-        // Default deny all
-        "match": "/{document=**}": {
-          "allow": "read, write: if false;"
-        },
+service cloud.firestore {
+  match /databases/{database}/documents {
 
-        // Users can be read by anyone, but only updated by the owner.
-        // New users can be created by anyone who is authenticated.
-        "match": "/users/{userId}": {
-          "allow": "read, create: if request.auth != null;",
-          "allow": "update: if request.auth != null && request.auth.uid == userId;"
-        },
+    // By default, deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
 
-        // Publicly readable collections that require auth for writes/deletes
-        "match": "/(announcements|admins|teachers|drivers|products|homework)/{docId}": {
-          "allow": "read: if true;",
-          "allow": "create, delete, update: if request.auth != null;"
-        },
+    // USERS collection
+    // Allow reading of any user profile by any authenticated user.
+    // Allow creation and update only by the user themselves.
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // ANNOUNCEMENTS, ADMINS, DRIVERS, TEACHERS, PRODUCTS collections
+    // Allow any authenticated user to read.
+    // Deny all writes from the client (should be managed by a backend/admin SDK).
+    match /(announcements|admins|drivers|teachers|products)/{docId} {
+        allow read: if request.auth != null;
+        allow write: if false; // Deny client-side writes for security
+    }
+
+    // HOMEWORK collection
+    // Allow any authenticated user to read.
+    // Deny all writes from the client.
+    match /homework/{docId} {
+        allow read: if request.auth != null;
+        allow write: if false;
+    }
+    
+    // STUDENTS collection
+    // Allow any authenticated user to read.
+    // Deny all writes from the client.
+    match /students/{docId} {
+        allow read: if request.auth != null;
+        allow write: if false;
+    }
+
+    // DRIVER LOCATIONS collection
+    // Allow any authenticated user to read any driver's location.
+    // Allow a driver to only write to their own location document.
+    match /driverLocations/{driverId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == driverId;
+    }
+
+    // CHATS collection
+    match /chats/{chatId} {
+      // Allow read/write access to chat metadata only if the user is a member.
+      // Allow creation if the user is adding themselves as a member.
+      allow read, write: if request.auth != null && resource.data.users.hasAny([request.auth.uid]);
+      allow create: if request.auth != null && request.resource.data.users.hasAny([request.auth.uid]);
+      
+      // MESSAGES subcollection
+      match /messages/{messageId} {
+        // Allow members of the chat to read and create messages.
+        allow read, create: if request.auth != null && get(/databases/$(database)/documents/chats/$(chatId)).data.users.hasAny([request.auth.uid]);
         
-        // Students can only be accessed by authenticated users
-        "match": "/students/{studentId}": {
-          "allow": "read, create, update, delete: if request.auth != null;"
-        },
-
-        // Driver locations can be read by any auth'd user, but only written by the driver themselves.
-        "match": "/driverLocations/{driverId}": {
-          "allow": "read: if request.auth != null;",
-          "allow": "write: if request.auth != null && request.auth.uid == driverId;"
-        },
-
-        // Chat rules
-        "match": "/chats/{chatId}": {
-          // Chat metadata can only be accessed by members
-          "allow": "get, list, create: if request.auth != null && request.resource.data.users[request.auth.uid] == true;",
-          "allow": "update: if request.auth != null && resource.data.users[request.auth.uid] == true;",
-          "allow": "delete: if request.auth != null && resource.data.users[request.auth.uid] == true;",
-
-          // Messages can only be accessed by chat members
-          "match": "/messages/{messageId}": {
-            "allow": "read, write: if request.auth != null && get(/databases/$(database)/documents/chats/$(chatId)).data.users[request.auth.uid] == true;"
-          }
-        }
+        // Prevent users from updating or deleting messages directly.
+        allow update, delete: if false;
       }
     }
   }
