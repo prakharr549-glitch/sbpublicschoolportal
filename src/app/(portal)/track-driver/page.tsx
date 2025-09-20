@@ -24,16 +24,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 
 type Driver = {
@@ -74,14 +64,10 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function TrackDriverPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [trackingStates, setTrackingStates] = useState<{[key: string]: boolean}>({});
   const { toast } = useToast();
   const router = useRouter();
   const [currentUser] = useAuthState(auth);
-  
-  const [isTrackingDialogOpen, setIsTrackingDialogOpen] = useState(false);
-  const [trackingDriver, setTrackingDriver] = useState<Driver | null>(null);
-  const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
-  const [isLocationLoading, setIsLocationLoading] = useState(false);
 
 
   useEffect(() => {
@@ -125,44 +111,65 @@ export default function TrackDriverPage() {
     return () => unsubscribe();
   }, [toast]);
   
-  useEffect(() => {
-    if (!trackingDriver || !isTrackingDialogOpen || !trackingDriver.uid) {
-        setDriverLocation(null);
-        return;
-    };
-
-    setIsLocationLoading(true);
-    const locationDocRef = doc(db, "driverLocations", trackingDriver.uid);
-    const unsubscribe = onSnapshot(locationDocRef, (doc) => {
-        if (doc.exists()) {
-            setDriverLocation(doc.data() as DriverLocation);
-        } else {
-            setDriverLocation(null);
-        }
-        setIsLocationLoading(false);
-    }, (error) => {
-        console.error("Error fetching location:", error);
-        setDriverLocation(null);
-        setIsLocationLoading(false);
-    });
-
-    return () => {
-        unsubscribe();
-    }
-  }, [trackingDriver, isTrackingDialogOpen]);
 
   const handleCreateChat = async (driver: Driver) => {
-    if (!currentUser || !driver.uid) {
-        toast({ title: "Error", description: "Driver user account not found for chat.", variant: "destructive" });
-        return;
-    };
+    if (!currentUser) return;
 
-    router.push(`/chat`);
+    // Check if chat already exists
+    const sortedUsers = [currentUser.uid, driver.id].sort();
+    const existingChatQuery = query(
+      collection(db, "chats"),
+      where("users", "==", sortedUsers)
+    );
+
+    const existingChatSnapshot = await getDocs(existingChatQuery);
+
+    if (!existingChatSnapshot.empty) {
+      // Chat already exists, navigate to it
+      const chatId = existingChatSnapshot.docs[0].id;
+      router.push(`/chat/${chatId}`);
+    } else {
+      // Create new chat
+      const newChatRef = await addDoc(collection(db, "chats"), {
+        users: sortedUsers,
+        userNames: {
+          [currentUser.uid]: currentUser.displayName,
+          [driver.id]: driver.name,
+        },
+        userAvatars: {
+          [currentUser.uid]: currentUser.photoURL || "",
+          [driver.id]: driver.photoURL || "",
+        },
+        createdAt: serverTimestamp(),
+      });
+      router.push(`/chat/${newChatRef.id}`);
+    }
   };
   
-  const handleTrackClick = (driver: Driver) => {
-    setTrackingDriver(driver);
-    setIsTrackingDialogOpen(true);
+  const handleTrackClick = async (driver: Driver) => {
+    if (!driver.uid) {
+        toast({ title: "Cannot Track Driver", description: "Driver account is not set up for tracking.", variant: "destructive" });
+        return;
+    }
+    
+    setTrackingStates(prev => ({...prev, [driver.id]: true}));
+
+    try {
+        const locationDocRef = doc(db, "driverLocations", driver.uid);
+        const locationDoc = await getDoc(locationDocRef);
+
+        if (locationDoc.exists()) {
+            const data = locationDoc.data() as DriverLocation;
+            window.open(`https://www.google.com/maps/search/?api=1&query=${data.location.latitude},${data.location.longitude}`, '_blank');
+        } else {
+            toast({ title: "Driver Offline", description: "This driver is not currently sharing their location." });
+        }
+    } catch (error) {
+        console.error("Error fetching driver location:", error);
+        toast({ title: "Error", description: "Could not fetch driver location.", variant: "destructive" });
+    } finally {
+        setTrackingStates(prev => ({...prev, [driver.id]: false}));
+    }
   }
 
   return (
@@ -215,7 +222,7 @@ export default function TrackDriverPage() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => handleCreateChat(driver)}>
+                         <DropdownMenuItem onSelect={() => router.push('/chat')}>
                             <MessageSquare className="mr-2 h-4 w-4"/>
                             <span>School Chat</span>
                         </DropdownMenuItem>
@@ -227,8 +234,8 @@ export default function TrackDriverPage() {
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <Button size="sm" onClick={() => handleTrackClick(driver)}>
-                    <MapPin className="mr-2 h-4 w-4" />
+                <Button size="sm" onClick={() => handleTrackClick(driver)} disabled={trackingStates[driver.id]}>
+                    {trackingStates[driver.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <MapPin className="mr-2 h-4 w-4" />}
                     Track
                 </Button>
               </CardFooter>
@@ -248,38 +255,7 @@ export default function TrackDriverPage() {
           </CardContent>
         </Card>
       )}
-
-      <AlertDialog open={isTrackingDialogOpen} onOpenChange={setIsTrackingDialogOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Tracking {trackingDriver?.name}</AlertDialogTitle>
-                 <AlertDialogDescription>
-                    Live location of the driver's vehicle.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="flex items-center justify-center p-4 min-h-[100px]">
-                {isLocationLoading ? (
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                ) : driverLocation ? (
-                    <div className="text-center space-y-2">
-                        <p>Last updated: {driverLocation.timestamp.toDate().toLocaleTimeString()}</p>
-                        <p className="font-mono text-sm">Lat: {driverLocation.location.latitude.toFixed(5)}, Lon: {driverLocation.location.longitude.toFixed(5)}</p>
-                        <Button asChild>
-                            <a href={`https://www.google.com/maps/search/?api=1&query=${driverLocation.location.latitude},${driverLocation.location.longitude}`} target="_blank" rel="noopener noreferrer">
-                                View on Google Maps
-                            </a>
-                        </Button>
-                    </div>
-                ) : (
-                     <p className="text-muted-foreground">Driver is not sharing their location.</p>
-                )}
-            </div>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Close</AlertDialogCancel>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
     </div>
   );
 }
+
