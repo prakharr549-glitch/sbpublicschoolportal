@@ -16,6 +16,7 @@ import {
   doc,
   updateDoc,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { Loader2, Send, ArrowLeft, MoreVertical, Trash2, CheckCheck } from "lucide-react";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -39,6 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { deleteChat } from "@/ai/flows/delete-chat-flow";
+import { cn } from "@/lib/utils";
 
 
 type Message = {
@@ -47,11 +49,13 @@ type Message = {
   senderId: string;
   timestamp: any;
   deleteAt?: Timestamp;
+  readBy: { [key: string]: boolean };
 };
 
 type ChatDetails = {
     userNames: { [key: string]: string };
     userAvatars: { [key: string]: string };
+    users: string[];
 }
 
 export default function ChatPage() {
@@ -66,6 +70,8 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  const otherUserId = chatDetails?.users.find(uid => uid !== currentUser?.uid);
+
   useEffect(() => {
     if (!currentUser || !chatId) return;
 
@@ -74,8 +80,6 @@ export default function ChatPage() {
         if (doc.exists()) {
             setChatDetails(doc.data() as ChatDetails);
         } else {
-            // If chat is deleted, redirect away. This can be triggered
-            // by the deleteChat flow.
             toast({
                 title: "Chat deleted",
                 description: "This conversation no longer exists.",
@@ -91,15 +95,25 @@ export default function ChatPage() {
 
     const unsubscribeMessages = onSnapshot(
       q,
-      (querySnapshot) => {
+      async (querySnapshot) => {
         const messagesData: Message[] = [];
         const now = Timestamp.now();
+        const batch = writeBatch(db);
+        
         querySnapshot.forEach((doc) => {
-          const data = doc.data();
+          const data = doc.data() as Omit<Message, 'id'>;
           if (!data.deleteAt || data.deleteAt > now) {
-            messagesData.push({ id: doc.id, ...data } as Message);
+            messagesData.push({ id: doc.id, ...data });
+
+            // Mark message as read
+            if (data.senderId !== currentUser.uid && !data.readBy?.[currentUser.uid]) {
+              const messageRef = doc.ref;
+              batch.update(messageRef, { [`readBy.${currentUser.uid}`]: true });
+            }
           }
         });
+
+        await batch.commit();
         setMessages(messagesData);
         setIsLoading(false);
       },
@@ -139,6 +153,7 @@ export default function ChatPage() {
         senderId: currentUser.uid,
         timestamp: serverTimestamp(),
         deleteAt: deleteAtTimestamp,
+        readBy: { [currentUser.uid]: true },
       });
       const chatDocRef = doc(db, "chats", chatId);
       await updateDoc(chatDocRef, {
@@ -179,7 +194,6 @@ export default function ChatPage() {
     }
   }
 
-  const otherUserId = chatDetails && Object.keys(chatDetails.userNames).find(userId => userId !== currentUser?.uid);
   const otherUserName = otherUserId ? getParticipantDetails(otherUserId).name : 'Chat';
 
   return (
@@ -201,6 +215,8 @@ export default function ChatPage() {
           messages.map((message) => {
              const senderDetails = getParticipantDetails(message.senderId);
              const isCurrentUser = message.senderId === currentUser?.uid;
+             const isReadByOther = otherUserId ? !!message.readBy?.[otherUserId] : false;
+
             return (
               <div
                 key={message.id}
@@ -227,7 +243,7 @@ export default function ChatPage() {
                         {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                     {isCurrentUser && (
-                        <CheckCheck className="h-4 w-4 text-green-500" />
+                        <CheckCheck className={cn("h-4 w-4", isReadByOther ? "text-green-500" : "text-muted-foreground/70")} />
                     )}
                   </div>
                 </div>
