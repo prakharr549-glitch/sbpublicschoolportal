@@ -32,6 +32,7 @@ type Driver = {
   mobile: string;
   vanNo: string;
   photoURL?: string; 
+  email?: string;
 };
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -97,14 +98,18 @@ export default function TrackDriverPage() {
 
     // Find the driver's user account in the 'users' collection to get their UID for chat
     const usersRef = collection(db, "users");
-    const userQuery = query(usersRef, where("role", "==", "Driver"), where("name", "==", otherUser.name));
+    // Query by a unique field if possible, like email. Fallback to name if email is not available.
+    const userQuery = otherUser.email 
+      ? query(usersRef, where("email", "==", otherUser.email), where("role", "==", "Driver"))
+      : query(usersRef, where("name", "==", otherUser.name), where("role", "==", "Driver"));
+
     const userSnapshot = await getDocs(userQuery);
 
     if (userSnapshot.empty) {
         toast({
             variant: "destructive",
             title: "Chat Not Available",
-            description: "This driver does not have a chat-enabled user account.",
+            description: `A chat-enabled user account for ${otherUser.name} could not be found.`,
         });
         return;
     }
