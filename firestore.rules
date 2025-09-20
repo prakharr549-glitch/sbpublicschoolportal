@@ -9,105 +9,135 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper function to check if the user is the owner of a document
+    // Helper function to check if a user is the owner of a document
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
+    
+    // Helper function to check if user has a specific role
+    function hasRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function isTeacher() {
+      return hasRole('Teacher');
+    }
 
-    // USERS
-    // - Allow users to create their own user document.
-    // - Allow authenticated users to read any user's profile (for chat functionality).
-    // - Allow users to update their own profile information.
+    function isAdmin() {
+      return hasRole('Admin');
+    }
+    
+    function isTeacherOrAdmin() {
+      return isTeacher() || isAdmin();
+    }
+
+    // Rules for the 'users' collection
     match /users/{userId} {
+      // Any authenticated user can read any user's profile (for chat purposes)
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated() && isOwner(userId);
-    }
-    
-    // ANNOUNCEMENTS
-    // - Allow authenticated users to read announcements.
-    // - Disallow client-side writes.
-    match /announcements/{announcementId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Managed by admin/backend flows
+      // A user can create their own profile document
+      allow create: if isOwner(userId);
+      // A user can only update their own profile
+      allow update: if isOwner(userId);
+      // Users cannot delete their own profiles
+      allow delete: if false;
     }
 
-    // HOMEWORK
-    // - Allow authenticated users to read homework.
-    // - Disallow client-side writes.
-    match /homework/{homeworkId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Managed by admin/backend flows
-    }
-
-    // ADMINS, TEACHERS, DRIVERS, STUDENTS (Contact Lists)
-    // - Allow authenticated users to read contact lists.
-    // - Disallow client-side writes.
-    match /admins/{adminId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Managed by admin/backend flows
-    }
-    match /teachers/{teacherId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Managed by admin/backend flows
-    }
-     match /drivers/{driverId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Managed by admin/backend flows
-    }
-     match /students/{studentId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Managed by admin/backend flows
-    }
-
-    // PRODUCTS (SHOP)
-    // - Allow authenticated users to read products.
-    // - Disallow client-side writes.
-    match /products/{productId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Managed by admin/backend flows
-    }
-
-    // STREAMS
-    // - Allow authenticated users to read stream information.
-    // - Allow admins to create and delete streams.
-    match /streams/{streamId} {
-      allow read: if isAuthenticated();
-      // Allow create/delete only if user has 'Admin' role.
-      // Assumes user document has a 'role' field.
-      allow create, delete: if isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-      allow update: if false;
-    }
-
-    // CHAT
-    // - Users can only create chats where they are a member.
-    // - Users can only read/write to chats they are a member of.
+    // Rules for 'chats' and subcollections
     match /chats/{chatId} {
-      // isParticipant function
-      function isParticipant() {
-        return request.auth.uid in resource.data.users;
-      }
-       // isNewChatParticipant function
-      function isNewChatParticipant() {
-        return request.auth.uid in request.resource.data.users;
-      }
+      // Users can only read/write to chats they are a part of
+      allow read, write: if isAuthenticated() && request.auth.uid in resource.data.users;
+      // Users can create a chat if they are one of the members in the chat
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.users;
+       // Disallow client-side deletion. Deletions should be handled by a backend flow.
+      allow delete: if false;
 
-      allow read, update: if isAuthenticated() && isParticipant();
-      allow create: if isAuthenticated() && isNewChatParticipant();
-      allow delete: if false; // Deletions handled by backend flow
-
-      // MESSAGES (subcollection of chat)
-      // - Users can read and write messages in chats they are a member of.
       match /messages/{messageId} {
-        allow read, create: if isAuthenticated() && get(parent).data.users.hasAny([request.auth.uid]);
-        allow update, delete: if false; // No message editing/deleting from client
+        // Users can read messages in chats they are part of
+        allow read: if isAuthenticated() && get(/databases/$(database)/documents/chats/$(chatId)).data.users.hasAny([request.auth.uid]);
+        // Users can create messages in chats they are part of
+        allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId && get(/databases/$(database)/documents/chats/$(chatId)).data.users.hasAny([request.auth.uid]);
+        // Disallow client-side updates/deletes of messages.
+        allow update, delete: if false;
       }
     }
     
-    // Default deny all other requests
-    match /{document=**} {
-      allow read, write: if false;
+    // Rules for 'products' collection
+    match /products/{productId} {
+      // Anyone authenticated can view products
+      allow read: if isAuthenticated();
+      // Only Admins can create, update, or delete products (via backend flow for delete)
+      allow write: if isAdmin();
+      // Allow create/update for admins
+      allow create, update: if isTeacherOrAdmin();
+       // Disallow client-side deletion. Deletions should be handled by a backend flow.
+      allow delete: if false;
+    }
+    
+     // Rules for 'announcements' collection
+    match /announcements/{announcementId} {
+      // Anyone authenticated can view announcements
+      allow read: if isAuthenticated();
+      // Only Admins or Teachers can create/delete announcements
+      allow write: if isTeacherOrAdmin();
+    }
+
+    // Rules for 'admins' collection
+    match /admins/{adminId} {
+      // Anyone can read the admin list
+      allow read: if isAuthenticated();
+      // Only Admins can add/delete other admins
+      allow write: if isAdmin();
+    }
+    
+    // Rules for 'teachers' collection
+    match /teachers/{teacherId} {
+      // Anyone can read the teacher list
+      allow read: if isAuthenticated();
+      // Only Admins can add/delete teachers
+      allow write: if isAdmin();
+    }
+    
+     // Rules for 'drivers' collection
+    match /drivers/{driverId} {
+      // Anyone can read the driver list
+      allow read: if isAuthenticated();
+      // Only Admins can add/delete drivers
+      allow write: if isAdmin();
+    }
+    
+    // Rules for 'homework' collection
+    match /homework/{homeworkId} {
+      // Anyone authenticated can read homework
+      allow read: if isAuthenticated();
+      // Only Admins or Teachers can create/delete homework
+      allow write: if isTeacherOrAdmin();
+    }
+
+    // Rules for 'students' collection (assuming this is sensitive)
+    match /students/{studentId} {
+      // Only Admins and Teachers can read/write student data
+      allow read, write: if isTeacherOrAdmin();
+    }
+    
+    // Rules for 'streams' collection
+    match /streams/{streamId} {
+        // All authenticated users can view the stream list
+        allow read: if isAuthenticated();
+        // Only Admins can create, update, or delete streams
+        allow write: if isAdmin();
+    }
+
+    // Rules for the new 'results' collection
+    match /results/{resultId} {
+      // All authenticated users can read/list results
+      allow read: if isAuthenticated();
+      // Only Admins and Teachers can create/upload new results
+      allow create: if isTeacherOrAdmin();
+      // Only Admins and Teachers can delete results
+      allow delete: if isTeacherOrAdmin();
+      // Disallow client-side updates
+      allow update: if false;
     }
   }
 }
-
-    
