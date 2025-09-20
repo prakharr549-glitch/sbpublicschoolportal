@@ -1,244 +1,116 @@
 
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { updateProfile } from "firebase/auth";
-import { useRouter } from "next/navigation";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { SchoolLogo } from "@/components/icons";
+import { useToast } from "@/hooks/use-toast";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, query } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
-const profileFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  email: z.string().email(),
-  photoURL: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-});
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  photoURL?: string;
+  role?: string;
+};
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
-
-const avatarOptions = Array.from({ length: 30 }, (_, i) => `https://picsum.photos/seed/avatar${i + 1}/200`);
-
-
-export default function AdminDashboardPage() {
+export default function AdminUsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const { toast } = useToast();
-  const user = auth.currentUser;
-  const router = useRouter();
-  const [isProfileLoading, setIsProfileLoading] = useState(true);
-
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      photoURL: "",
-    },
-  });
-  
-  const photoURL = form.watch("photoURL");
 
   useEffect(() => {
-    async function fetchProfile() {
-      if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          form.reset({
-            name: data.name || user.displayName || "",
-            email: data.email || user.email || "",
-            photoURL: data.photoURL || user.photoURL || "",
-          });
-        } else {
-          form.reset({
-            name: user.displayName || "",
-            email: user.email || "",
-            photoURL: user.photoURL || "",
-          });
-        }
-      }
-      setIsProfileLoading(false);
-    }
-    fetchProfile();
-  }, [user, form]);
-
-  async function onSubmit(data: ProfileFormValues) {
-    if (!user) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "You must be logged in to update your profile.",
-        });
-        return;
-    }
-
-    try {
-        await updateProfile(user, { 
-            displayName: data.name,
-            photoURL: data.photoURL,
-        });
-        
-        const userProfileData = {
-          uid: user.uid,
+    const q = query(collection(db, "users"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const usersData: User[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        usersData.push({
+          id: doc.id,
           name: data.name,
           email: data.email,
           photoURL: data.photoURL,
-        };
-
-        await setDoc(doc(db, "users", user.uid), userProfileData, { merge: true });
-        
-        toast({
-            title: "Profile Updated",
-            description: "Your profile has been successfully updated.",
+          role: data.role,
         });
+      });
+      setUsers(usersData);
+      setIsDataLoading(false);
+    }, (error) => {
+      console.error("Error fetching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Permission Denied",
+        description: "You do not have permission to view this data.",
+      });
+      setIsDataLoading(false);
+    });
 
-        router.push('/dashboard');
-
-    } catch (error) {
-        console.error("Error updating profile:", error);
-        toast({
-            variant: "destructive",
-            title: "Update Failed",
-            description: "There was an error updating your profile.",
-        });
-    }
-  }
-
-  if (isProfileLoading) {
-    return (
-        <div className="flex min-h-screen items-center justify-center bg-background">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-    );
-  }
+    return () => unsubscribe();
+  }, [toast]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-2xl">
-      <div className="mb-8 flex flex-col items-center justify-center gap-4">
-          <SchoolLogo className="h-12 w-12 text-primary" />
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">Admin Profile</CardTitle>
-            <CardDescription className="text-center">
-              Manage your administrator profile details.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="photoURL"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col items-center">
-                      <FormLabel>Profile Picture</FormLabel>
-                      <FormControl>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button type="button" className="relative">
-                                <Avatar className="h-24 w-24">
-                                    <AvatarImage src={photoURL || undefined} alt={form.getValues("name")} />
-                                    <AvatarFallback>{form.getValues("name")?.charAt(0) || 'A'}</AvatarFallback>
-                                </Avatar>
-                                <div className="absolute bottom-0 right-0 rounded-full bg-primary p-1">
-                                    <Loader2 className="h-4 w-4 text-primary-foreground" />
-                                </div>
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <ScrollArea className="h-72 w-96">
-                                <div className="p-4 grid grid-cols-5 gap-2">
-                                  {avatarOptions.map((url) => (
-                                    <button
-                                      type="button"
-                                      key={url}
-                                      className={cn(
-                                        "rounded-full transition-all",
-                                        field.value === url
-                                          ? "ring-2 ring-primary ring-offset-2"
-                                          : "hover:scale-105"
-                                      )}
-                                      onClick={() => field.onChange(url)}
-                                    >
-                                      <Avatar className="h-16 w-16">
-                                        <AvatarImage src={url} alt="Avatar" />
-                                        <AvatarFallback>AV</AvatarFallback>
-                                      </Avatar>
-                                    </button>
-                                  ))}
-                                </div>
-                            </ScrollArea>
-                          </PopoverContent>
-                        </Popover>
-                      </FormControl>
-                       <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your full name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your email" {...field} disabled />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-3xl font-bold tracking-tight font-headline">
+        User Management
+      </h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>Registered Users</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isDataLoading ? (
+            <div className="flex justify-center items-center h-24">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.length > 0 ? (
+                  users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.photoURL} alt={user.name} />
+                            <AvatarFallback>{user.name?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          {user.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.role}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                      No users found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

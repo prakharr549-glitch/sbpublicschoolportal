@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -21,6 +22,7 @@ type User = {
   name: string;
   email: string;
   photoURL?: string;
+  role?: string;
 };
 
 export default function UsersPage() {
@@ -39,6 +41,7 @@ export default function UsersPage() {
           name: data.name,
           email: data.email,
           photoURL: data.photoURL,
+          role: data.role,
         });
       });
       setUsers(usersData);
@@ -76,6 +79,7 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -92,11 +96,12 @@ export default function UsersPage() {
                         </div>
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.role}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={2} className="h-24 text-center">
+                    <TableCell colSpan={3} className="h-24 text-center">
                       No users found.
                     </TableCell>
                   </TableRow>

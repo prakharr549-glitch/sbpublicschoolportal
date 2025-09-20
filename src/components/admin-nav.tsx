@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -5,15 +6,13 @@ import { usePathname } from "next/navigation";
 import {
   Users,
   Settings,
-  LayoutDashboard,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { SchoolLogo } from "@/components/icons";
 
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin", label: "Users", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
