@@ -208,7 +208,7 @@ export default function TrackDriverPage() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => handleCreateChat(driver)}>
+                        <DropdownMenuItem onSelect={() => router.push('/chat')}>
                             <MessageSquare className="mr-2 h-4 w-4"/>
                             <span>School Chat</span>
                         </DropdownMenuItem>
