@@ -17,7 +17,6 @@ import {
   Radio,
   MessageSquare,
   Download,
-  MapPin,
   Video,
 } from "lucide-react";
 
