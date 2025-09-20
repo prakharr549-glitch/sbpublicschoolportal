@@ -39,6 +39,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 const streamFormSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters."),
@@ -274,56 +275,65 @@ export default function LiveStreamPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
         ) : streams.length > 0 ? (
-          streams.map((stream) => (
-            <Card key={stream.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <CardTitle className="font-headline">{stream.title}</CardTitle>
-                    <CardDescription>
-                      Scheduled for {stream.date.toDate().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                    </CardDescription>
-                  </div>
-                  {userRole === 'Admin' && (
-                     <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                           <Trash2 className="h-4 w-4" />
+          streams.map((stream) => {
+            const isLive = new Date().toDateString() === stream.date.toDate().toDateString();
+            return (
+                <Card key={stream.id}>
+                    <CardHeader>
+                        <div className="flex justify-between items-start gap-4">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                     {isLive && <Radio className="h-5 w-5 text-red-500 animate-pulse" />}
+                                    <CardTitle className="font-headline">{stream.title}</CardTitle>
+                                </div>
+                                <CardDescription>
+                                Scheduled for {stream.date.toDate().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {isLive && <Badge variant="destructive">LIVE</Badge>}
+                                {userRole === 'Admin' && (
+                                    <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                        <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete this stream link.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            className="bg-destructive hover:bg-destructive/90"
+                                            onClick={() => handleDelete(stream.id)}>
+                                            Delete
+                                        </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-foreground/80">{stream.description}</p>
+                    </CardContent>
+                    <CardFooter>
+                        <Button asChild className="w-full">
+                            <Link href={stream.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                                <Youtube className="mr-2 h-5 w-5" />
+                                Watch on YouTube
+                            </Link>
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete this stream link.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive hover:bg-destructive/90"
-                            onClick={() => handleDelete(stream.id)}>
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-foreground/80">{stream.description}</p>
-              </CardContent>
-              <CardFooter>
-                 <Button asChild className="w-full">
-                    <Link href={stream.youtubeUrl} target="_blank" rel="noopener noreferrer">
-                        <Youtube className="mr-2 h-5 w-5" />
-                        Watch on YouTube
-                    </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))
+                    </CardFooter>
+                </Card>
+            );
+        })
         ) : (
             <Card>
                 <CardContent className="py-12">
