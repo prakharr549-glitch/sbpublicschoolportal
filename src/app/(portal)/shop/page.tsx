@@ -357,7 +357,7 @@ export default function ShopPage() {
     return cart.reduce((total, product) => total + product.price, 0);
   };
 
-  const onCheckoutSubmit = (data: CheckoutFormValues) => {
+  const onCheckoutSubmit = async (data: CheckoutFormValues) => {
     const phoneNumber = "6392702249";
     const cartItemsText = cart.map(item => `- ${item.name} (INR ${item.price.toFixed(2)})`).join('\\n');
     const total = getCartTotal();
@@ -382,6 +382,15 @@ ${cartItemsText}
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
     try {
+        // Save order to Firestore
+        await addDoc(collection(db, "orders"), {
+            ...data,
+            items: cart.map(item => ({ id: item.id, name: item.name, price: item.price })),
+            total: total,
+            createdAt: Timestamp.now(),
+            status: 'Pending',
+        });
+
         window.open(whatsappUrl, '_blank');
         toast({
             title: "Redirecting to WhatsApp",
@@ -392,11 +401,11 @@ ${cartItemsText}
         setIsCheckoutOpen(false);
         checkoutForm.reset();
     } catch (error) {
-        console.error("Failed to open WhatsApp:", error);
+        console.error("Failed to open WhatsApp or save order:", error);
         toast({
             variant: "destructive",
             title: "Order Failed",
-            description: "Could not open WhatsApp. Please try again.",
+            description: "Could not place the order. Please try again.",
         });
     }
   };
@@ -784,5 +793,3 @@ ${cartItemsText}
     </div>
   );
 }
-
-    

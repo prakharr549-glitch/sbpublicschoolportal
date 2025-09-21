@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Users,
   Settings,
+  ShoppingBag,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ import { SchoolLogo } from "@/components/icons";
 
 const navItems = [
   { href: "/admin", label: "Users", icon: Users },
+  { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
