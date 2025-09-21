@@ -1,109 +1,98 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to check user roles
-    function isUserAuthenticated() {
-      return request.auth != null;
+    // Helper function to get user's role
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
 
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    // Helper function to check if a user is an Admin
+    function isAdmin(userId) {
+      return getUserRole(userId) == 'Admin';
     }
-
-    function isAdmin() {
-      return isUserAuthenticated() && getUserRole() == 'Admin';
+    
+    // Helper function to check if a user is a Teacher or Admin
+    function isTeacherOrAdmin(userId) {
+      let role = getUserRole(userId);
+      return role == 'Admin' || role == 'Teacher';
     }
-
-    function isTeacher() {
-        return isUser-authenticated() && getUserRole() == 'Teacher';
-    }
-
-    function isStudent() {
-        return isUser-authenticated() && getUserRole() == 'Student';
-    }
-
-    // Users can read/update their own profile, Admins can manage all users.
+    
+    // Users can read/write their own profile, Admins can read all.
     match /users/{userId} {
-      allow read, update: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow create: if isUserAuthenticated();
-      allow list: if isAdmin() || isTeacher();
-    }
-
-    // Allow Admins to read/write all collections for management purposes.
-    // Specific read/write rules for other roles are defined below.
-    match /{document=**} {
-      allow read, write: if isAdmin();
-    }
-
-    // Public read for authenticated users, write only for Admins/Teachers
-    match /announcements/{announcementId} {
-      allow read: if isUserAuthenticated();
-      allow create, update, delete: if isAdmin() || isTeacher();
-    }
-
-    // Public read for authenticated users, write only for Admins/Teachers
-    match /homework/{homeworkId} {
-        allow read: if isUserAuthenticated();
-        allow create, update, delete: if isAdmin() || isTeacher();
-    }
-
-    // Public read for authenticated users, write only for Admins/Teachers
-    match /results/{resultId} {
-        allow read: if isUserAuthenticated();
-        allow create, update, delete: if isAdmin() || isTeacher();
-    }
-
-    // Public read for authenticated users, write only for Admins
-     match /streams/{streamId} {
-      allow read: if isUserAuthenticated();
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Public read for authenticated users, write only for Admins
-    match /products/{productId} {
-      allow read: if isUserAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow read, update, delete: if request.auth.uid == userId || isAdmin(request.auth.uid);
+      allow create: if request.auth.uid != null;
     }
     
-    // Students can create orders.
-    // Students can read their own orders. Admins can read all.
-    match /orders/{orderId} {
-      allow create: if isStudent();
-      allow read: if (isStudent() && resource.data.userId == request.auth.uid) || isAdmin();
-      allow list: if isAdmin();
-    }
-
-    // Chat documents
-    match /chats/{chatId} {
-      // Users can read/write chats they are a member of
-      allow read, write: if isUserAuthenticated() && request.auth.uid in resource.data.users;
-      allow create: if isUserAuthenticated() && request.auth.uid in request.resource.data.users;
-      
-      // Messages subcollection
-      match /messages/{messageId} {
-        allow read, write: if isUserAuthenticated() && get(parent).data.users.hasAny([request.auth.uid]);
-        allow create: if isUserAuthenticated() && get(parent).data.users.hasAny([request.auth.uid]);
-      }
-    }
-    
-    // Admins, Teachers, Students, and Drivers lists - Read for all, Write for Admin
+    // Admins have full access to their own records. Others can't access.
     match /admins/{adminId} {
-        allow read: if isUserAuthenticated();
-        allow create, update, delete: if isAdmin();
+        allow read, write: if isAdmin(request.auth.uid);
     }
-     match /teachers/{teacherId} {
-        allow read: if isUserAuthenticated();
-        allow create, update, delete: if isAdmin();
+    
+    // Admins/Teachers can read all. Admins can write.
+    match /teachers/{teacherId} {
+        allow read: if isTeacherOrAdmin(request.auth.uid);
+        allow write: if isAdmin(request.auth.uid);
     }
-     match /students/{studentId} {
-        allow read: if isUserAuthenticated() && (isAdmin() || isTeacher());
-        allow create, update, delete: if isAdmin();
+    
+    // Admins/Teachers can read all. Admins can write.
+    match /students/{studentId} {
+        allow read: if isTeacherOrAdmin(request.auth.uid);
+        allow write: if isAdmin(request.auth.uid);
     }
-     match /drivers/{driverId} {
-        allow read: if isUserAuthenticated();
-        allow create, update, delete: if isAdmin();
+    
+    // Admins/Teachers can read all. Admins can write.
+    match /drivers/{driverId} {
+        allow read: if isTeacherOrAdmin(request.auth.uid);
+        allow write: if isAdmin(request.auth.uid);
+    }
+
+    // Authenticated users can read. Admins/Teachers can write.
+    match /announcements/{announcementId} {
+        allow read: if request.auth.uid != null;
+        allow write: if isTeacherOrAdmin(request.auth.uid);
+    }
+    
+    // Authenticated users can read. Admins/Teachers can write.
+    match /homework/{homeworkId} {
+        allow read: if request.auth.uid != null;
+        allow write: if isTeacherOrAdmin(request.auth.uid);
+    }
+    
+    // Authenticated users can read. Admins can write.
+    match /streams/{streamId} {
+        allow read: if request.auth.uid != null;
+        allow write: if isAdmin(request.auth.uid);
+    }
+    
+    // Authenticated users can read. Admins/Teachers can write.
+    match /results/{resultId} {
+        allow read: if request.auth.uid != null;
+        allow write: if isTeacherOrAdmin(request.auth.uid);
+    }
+    
+    // Authenticated users can read. Admins can write.
+    match /products/{productId} {
+        allow read: if request.auth.uid != null;
+        allow write: if isAdmin(request.auth.uid);
+    }
+
+    // Orders: Admins can read all. Users can create, and read their own.
+    match /orders/{orderId} {
+        allow read: if isAdmin(request.auth.uid) || resource.data.userId == request.auth.uid;
+        allow create: if request.auth.uid != null;
+        allow write: if isAdmin(request.auth.uid);
+    }
+    
+    // Chat: Users can only access chats they are a member of.
+    match /chats/{chatId} {
+      allow read, write: if request.auth.uid in resource.data.users;
+
+      match /messages/{messageId} {
+        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
+      }
     }
   }
 }
