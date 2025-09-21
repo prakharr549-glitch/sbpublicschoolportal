@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Users,
-  Settings,
   ShoppingBag,
 } from "lucide-react";
 
@@ -15,7 +14,6 @@ import { SchoolLogo } from "@/components/icons";
 const navItems = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export function AdminNav({ className }: React.HTMLAttributes<HTMLElement>) {
