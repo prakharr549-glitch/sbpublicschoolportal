@@ -54,12 +54,15 @@ export default function MyOrdersPage() {
         return;
     };
 
-    const q = query(collection(db, "orders"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+    // Removed orderBy from the query to avoid needing a composite index.
+    const q = query(collection(db, "orders"), where("userId", "==", user.uid));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const ordersData: Order[] = [];
       querySnapshot.forEach((doc) => {
         ordersData.push({ id: doc.id, ...(doc.data() as Omit<Order, 'id'>) });
       });
+      // Sort on the client-side instead.
+      ordersData.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
       setOrders(ordersData);
       setIsDataLoading(false);
     }, (error) => {
