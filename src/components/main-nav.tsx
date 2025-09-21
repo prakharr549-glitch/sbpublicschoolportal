@@ -17,7 +17,6 @@ import {
   Radio,
   MessageSquare,
   Award,
-  Video,
   History,
 } from "lucide-react";
 
@@ -33,7 +32,6 @@ const navItems = [
   { href: "/livestream", label: "Live Stream", icon: Radio },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/results", label: "Results", icon: Award },
-  { href: "/videos", label: "School Videos", icon: Video },
   { href: "/my-orders", label: "My Orders", icon: History },
 ];
 
