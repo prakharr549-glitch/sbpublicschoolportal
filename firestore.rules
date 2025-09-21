@@ -1,120 +1,91 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
+  
     function isAuth() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    function isUser(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+    
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
     function isAdmin() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      return isAuth() && userRole() == 'Admin';
     }
-    
+
     function isTeacher() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Teacher';
-    }
-    
-    function isTeacherOrAdmin() {
-        return isAdmin() || isTeacher();
+      return isAuth() && (userRole() == 'Teacher' || isAdmin());
     }
 
-    // Admins can read/write anything for administrative purposes
-    match /{document=**} {
-      allow read, write: if isAdmin();
-    }
-
-    // Users collection
     match /users/{userId} {
-      // All authenticated users can see user profiles (for chat, etc.)
-      allow get: if isAuth();
-      // All authenticated users can list user profiles (for starting new chats)
-      allow list: if isAuth();
-      // Users can only create their own user document
-      allow create: if isOwner(userId);
-      // Users can only update their own profile
-      allow update: if isOwner(userId);
-      // Users cannot delete their own accounts from the client
-      allow delete: if false;
+      allow read: if isAuth();
+      allow write: if isUser(userId) || isAdmin();
     }
 
-    // Chats collection
-    match /chats/{chatId} {
-      // Users can only read chats they are a part of
-      allow get, list: if isAuth() && request.auth.uid in resource.data.users;
-      // Users can only create chats they are a part of
-      allow create: if isAuth() && request.auth.uid in request.resource.data.users;
-      // Users can update chats they are part of (e.g., last message)
-      allow update: if isAuth() && request.auth.uid in resource.data.users;
-
-      // Messages subcollection
-      match /messages/{messageId} {
-        // Users can read messages in chats they are part of
-        allow read, write, create: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
-        allow delete, update: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
-      }
-    }
-
-    // Admins, Teachers, Students, Drivers (publicly readable lists)
     match /admins/{adminId} {
       allow read: if isAuth();
       allow create, update, delete: if isAdmin();
     }
+
     match /teachers/{teacherId} {
       allow read: if isAuth();
       allow create, update, delete: if isAdmin();
     }
+    
     match /students/{studentId} {
       allow read: if isAuth();
       allow create, update, delete: if isAdmin();
     }
+    
     match /drivers/{driverId} {
       allow read: if isAuth();
       allow create, update, delete: if isAdmin();
     }
     
-    // Announcements (readable by all, writable by admin/teacher)
-    match /announcements/{announcementId} {
-        allow read: if isAuth();
-        allow create, update, delete: if isTeacherOrAdmin();
-    }
-    
-    // Homework (readable by all, writable by admin/teacher)
-    match /homework/{homeworkId} {
-        allow read: if isAuth();
-        allow create, update, delete: if isTeacherOrAdmin();
-    }
-    
-    // Results (readable by all, writable by admin/teacher)
-    match /results/{resultId} {
-        allow read: if isAuth();
-        allow create, update, delete: if isTeacherOrAdmin();
-    }
-    
-    // Streams (readable by all, writable by admin)
-    match /streams/{streamId} {
-        allow read: if isAuth();
-        allow create, update, delete: if isAdmin();
-    }
-
-    // Products (readable by all, writable by admin)
     match /products/{productId} {
       allow read: if isAuth();
       allow create, update, delete: if isAdmin();
     }
+
+    match /announcements/{announcementId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isTeacher();
+    }
     
-    // Orders collection
+    match /homework/{homeworkId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isTeacher();
+    }
+    
+    match /results/{resultId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isTeacher();
+    }
+
+    match /streams/{streamId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /orders/{orderId} {
-      // Admins can read all orders, users can read their own
-      allow read: if isAdmin() || (isAuth() && resource.data.phoneNumber == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone);
-      // Authenticated users can create orders
+      allow read: if isAdmin() || (isAuth() && request.auth.uid == resource.data.userId);
       allow create: if isAuth();
-      // No one can update or delete orders from the client
-      allow update, delete: if false;
+      allow update, delete: if isAdmin();
+    }
+
+    match /chats/{chatId} {
+      allow read, write: if isAuth() && request.auth.uid in resource.data.users;
+      
+      match /messages/{messageId} {
+        allow read, write: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
+      }
     }
   }
 }
