@@ -147,7 +147,6 @@ export default function ShopPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<Product | null>(null);
   const [user, authLoading] = useAuthState(auth);
   const [userRole, setUserRole] = useState<string | null>(null);
   
@@ -170,7 +169,7 @@ export default function ShopPage() {
     defaultValues: {
         studentName: "",
         studentClass: "",
-        age: "",
+        age: undefined,
         phoneNumber: "",
         address: "",
         rollNumber: "",
@@ -527,23 +526,23 @@ ${cartItemsText}
               </DialogContent>
             </Dialog>
 
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Shop Actions</DropdownMenuLabel>
-                {canManage && (
-                    <DropdownMenuItem onClick={() => requestPassword(() => setIsAddDialogOpen(true))}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        <span>Add Product</span>
-                    </DropdownMenuItem>
-                )}
-            </DropdownMenuContent>
-            </DropdownMenu>
+            {canManage && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Shop Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => requestPassword(() => setIsAddDialogOpen(true))}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            <span>Add Product</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
         </div>
       </div>
       
@@ -716,47 +715,49 @@ ${cartItemsText}
                     <CardHeader>
                         <div className="flex justify-between items-start">
                             <CardTitle className="font-headline">{item.name}</CardTitle>
-                             <AlertDialog>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0" disabled={!canManage}>
-                                        <span className="sr-only">Open menu</span>
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleEditClick(item as Product)}>
-                                        <Pencil className="mr-2 h-4 w-4" />
-                                        <span>Edit</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={item.id.startsWith('default-')} >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            <span>Delete</span>
+                             {canManage && (
+                                <AlertDialog>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => handleEditClick(item as Product)}>
+                                            <Pencil className="mr-2 h-4 w-4" />
+                                            <span>Edit</span>
                                         </DropdownMenuItem>
-                                    </AlertDialogTrigger>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the product "{item.name}".
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                    className="bg-destructive hover:bg-destructive/90"
-                                    onClick={() => requestPassword(() => handleDelete(item.id))}
-                                >
-                                    Continue
-                                </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                            </AlertDialog>
+                                        <DropdownMenuSeparator />
+                                        <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={item.id.startsWith('default-')} >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                <span>Delete</span>
+                                            </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the product "{item.name}".
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        className="bg-destructive hover:bg-destructive/90"
+                                        onClick={() => requestPassword(() => handleDelete(item.id))}
+                                    >
+                                        Continue
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                                </AlertDialog>
+                            )}
                         </div>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-2 pt-0">
@@ -784,4 +785,4 @@ ${cartItemsText}
   );
 }
 
-  
+    
