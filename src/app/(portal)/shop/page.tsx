@@ -171,7 +171,7 @@ export default function ShopPage() {
     defaultValues: {
         studentName: "",
         studentClass: "",
-        age: undefined,
+        age: "" as any,
         phoneNumber: "",
         address: "",
         rollNumber: "",
