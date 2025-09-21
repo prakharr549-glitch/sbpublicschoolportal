@@ -61,10 +61,11 @@ export default function ChatPage({ params }: { params: { id: string } }) {
             setChatDetails(doc.data() as ChatDetails);
         } else {
             toast({
-                title: "Chat deleted",
-                description: "This conversation no longer exists.",
+                variant: "destructive",
+                title: "Chat not found",
+                description: "This conversation may have been deleted.",
             });
-            router.push("/chat");
+            router.replace("/chat");
         }
     });
 
@@ -85,21 +86,26 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           messagesData.push({ id: doc.id, ...data });
 
           // Mark message as read
-          if (data.senderId !== currentUser.uid && !data.readBy?.[currentUser.uid]) {
+          if (currentUser?.uid && data.senderId !== currentUser.uid && !data.readBy?.[currentUser.uid]) {
             hasUnread = true;
             const messageRef = doc.ref;
             batch.update(messageRef, { [`readBy.${currentUser.uid}`]: true });
           }
         });
         
-        if (hasUnread) {
-          await batch.commit();
-          // Update last message read status on the chat document
-          const latestMessage = messagesData[messagesData.length - 1];
-          if(latestMessage.senderId !== currentUser.uid) {
-            await updateDoc(chatDocRef, {
-                [`lastMessageReadBy.${currentUser.uid}`]: true
-            });
+        if (hasUnread && currentUser?.uid) {
+          try {
+            await batch.commit();
+            // Update last message read status on the chat document
+            const latestMessage = messagesData[messagesData.length - 1];
+            if(latestMessage.senderId !== currentUser.uid) {
+              await updateDoc(chatDocRef, {
+                  [`lastMessageReadBy.${currentUser.uid}`]: true
+              });
+            }
+          } catch (error) {
+             // It's possible the chat was deleted between the read and the commit
+            console.warn("Could not mark messages as read, chat may be deleted.", error);
           }
         }
 
@@ -108,11 +114,14 @@ export default function ChatPage({ params }: { params: { id: string } }) {
       },
       (error) => {
         console.error("Error fetching messages:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load messages.",
-        });
+        // Don't show toast if chat was deleted, as the other listener will handle it
+        if (error.code !== 'permission-denied') {
+             toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not load messages.",
+            });
+        }
         setIsLoading(false);
       }
     );
@@ -170,6 +179,14 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   }
 
   const otherUserName = otherUserId ? getParticipantDetails(otherUserId).name : 'Chat';
+
+  if (!chatDetails) {
+     return (
+        <div className="flex h-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+     )
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] bg-card rounded-xl border">
@@ -246,7 +263,3 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
-
-    
