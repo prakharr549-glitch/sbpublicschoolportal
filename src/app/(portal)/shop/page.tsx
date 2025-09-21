@@ -56,7 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, updateDoc, Timestamp, orderBy, limit, getDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X, Lock, ShoppingBag } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X, Lock, ShoppingBag, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { deleteProduct } from "@/ai/flows/delete-product-flow";
@@ -152,6 +152,7 @@ export default function ShopPage() {
   const [userRole, setUserRole] = useState<string | null>(null);
   
   const canManage = userRole === 'Admin';
+  const isStudent = userRole === 'Student';
 
 
   const { toast } = useToast();
@@ -363,6 +364,11 @@ export default function ShopPage() {
   };
 
   const onCheckoutSubmit = async (data: CheckoutFormValues) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'You must be logged in to place an order.'});
+        return;
+    }
+
     const phoneNumber = "6392702249";
     const cartItemsText = cart.map(item => `- ${item.name} (INR ${item.price.toFixed(2)})`).join('\\n');
     const total = getCartTotal();
@@ -390,6 +396,7 @@ ${cartItemsText}
         // Save order to Firestore
         await addDoc(collection(db, "orders"), {
             ...data,
+            userId: user.uid,
             items: cart.map(item => ({ id: item.id, name: item.name, price: item.price })),
             total: total,
             createdAt: Timestamp.now(),
@@ -486,6 +493,14 @@ ${cartItemsText}
           School Shop
         </h1>
         <div className="flex items-center gap-2">
+            {isStudent && (
+                <Button asChild variant="outline">
+                    <Link href="/my-orders">
+                        <History className="mr-2 h-4 w-4" />
+                        My Orders
+                    </Link>
+                </Button>
+            )}
             <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="icon" className="relative">
@@ -557,7 +572,7 @@ ${cartItemsText}
                         <DropdownMenuItem asChild>
                             <Link href="/admin/orders">
                                 <ShoppingBag className="mr-2 h-4 w-4" />
-                                <span>View Orders</span>
+                                <span>View All Orders</span>
                             </Link>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -804,5 +819,3 @@ ${cartItemsText}
     </div>
   );
 }
-
-    

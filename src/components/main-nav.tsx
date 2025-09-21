@@ -13,11 +13,12 @@ import {
   UserCog,
   User,
   Truck,
-  Image as ImageIcon,
+  ImageIcon,
   Radio,
   MessageSquare,
   Award,
   Video,
+  History,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ const navItems = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/results", label: "Results", icon: Award },
   { href: "/videos", label: "School Videos", icon: Video },
+  { href: "/my-orders", label: "My Orders", icon: History },
 ];
 
 const userRoleNavItems = [
@@ -89,5 +91,3 @@ export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
     </nav>
   );
 }
-
-  
