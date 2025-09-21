@@ -53,8 +53,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { addDoc, collection, onSnapshot, query, doc, updateDoc, Timestamp, orderBy, limit } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import { addDoc, collection, onSnapshot, query, doc, updateDoc, Timestamp, orderBy, limit, getDoc } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
 import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -147,6 +148,11 @@ export default function ShopPage() {
   const [passwordError, setPasswordError] = useState('');
   const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
   const [itemToDelete, setItemToDelete] = useState<Product | null>(null);
+  const [user, authLoading] = useAuthState(auth);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  
+  const canManage = userRole === 'Admin';
+
 
   const { toast } = useToast();
 
@@ -170,6 +176,17 @@ export default function ShopPage() {
         rollNumber: "",
     },
   });
+  
+  useEffect(() => {
+    if (user && !authLoading) {
+      const userDocRef = doc(db, "users", user.uid);
+      getDoc(userDocRef).then(userDoc => {
+        if (userDoc.exists()) {
+          setUserRole(userDoc.data().role);
+        }
+      });
+    }
+  }, [user, authLoading]);
 
   useEffect(() => {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(20));
@@ -343,7 +360,7 @@ export default function ShopPage() {
 
   const onCheckoutSubmit = (data: CheckoutFormValues) => {
     const phoneNumber = "6392702249";
-    const cartItemsText = cart.map(item => `- ${item.name} (INR ${item.price.toFixed(2)})`).join('\n');
+    const cartItemsText = cart.map(item => `- ${item.name} (INR ${item.price.toFixed(2)})`).join('\\n');
     const total = getCartTotal();
 
     const message = `
@@ -386,7 +403,7 @@ ${cartItemsText}
   };
 
 
-  const isLoading = isDataLoading;
+  const isLoading = authLoading || isDataLoading;
   const displayedProducts = products.length > 0 ? products : defaultProducts.map((p, i) => ({...p, id: `default-${i}`}));
   
   const renderProductForm = (isEditMode: boolean) => (
@@ -519,10 +536,12 @@ ${cartItemsText}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Shop Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => requestPassword(() => setIsAddDialogOpen(true))}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    <span>Add Product</span>
-                </DropdownMenuItem>
+                {canManage && (
+                    <DropdownMenuItem onClick={() => requestPassword(() => setIsAddDialogOpen(true))}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        <span>Add Product</span>
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuContent>
             </DropdownMenu>
         </div>
@@ -603,7 +622,7 @@ ${cartItemsText}
                     Please provide student details to complete the order.
                 </DialogDescription>
             </DialogHeader>
-            <Form {...checkoutForm}>
+            <FormProvider {...checkoutForm}>
                 <form onSubmit={checkoutForm.handleSubmit(onCheckoutSubmit)} className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                      <FormField
                         control={checkoutForm.control}
@@ -673,7 +692,7 @@ ${cartItemsText}
                             </FormItem>
                         )}
                     />
-                     <DialogFooter className="mt-4 pt-4 border-t">
+                     <DialogFooter className="mt-4 pt-4 border-t sticky bottom-0 bg-background">
                         <Button type="button" variant="outline" onClick={() => { setIsCheckoutOpen(false); setIsCartOpen(true);}}>Back to Cart</Button>
                         <Button type="submit" disabled={checkoutForm.formState.isSubmitting}>
                             {checkoutForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -681,7 +700,7 @@ ${cartItemsText}
                         </Button>
                     </DialogFooter>
                 </form>
-            </Form>
+            </FormProvider>
         </DialogContent>
       </Dialog>
 
@@ -700,7 +719,7 @@ ${cartItemsText}
                              <AlertDialog>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <Button variant="ghost" className="h-8 w-8 p-0" disabled={!canManage}>
                                         <span className="sr-only">Open menu</span>
                                         <MoreHorizontal className="h-4 w-4" />
                                     </Button>
@@ -764,3 +783,5 @@ ${cartItemsText}
     </div>
   );
 }
+
+  
