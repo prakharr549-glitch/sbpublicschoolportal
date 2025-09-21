@@ -56,11 +56,12 @@ import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { addDoc, collection, onSnapshot, query, doc, updateDoc, Timestamp, orderBy, limit, getDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X, Lock } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, ShoppingCart, Pencil, MoreHorizontal, X, Lock, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { deleteProduct } from "@/ai/flows/delete-product-flow";
 import { Label } from "@/components/ui/label";
+import Link from "next/link";
 
 const productFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -310,6 +311,7 @@ export default function ShopPage() {
 
 
   async function handleDelete(productId: string) {
+    if (productId.startsWith('default-')) return;
     try {
       await deleteProduct(productId);
       toast({
@@ -341,15 +343,18 @@ export default function ShopPage() {
     });
   };
 
-  const handleRemoveFromCart = (productId: string) => {
+  const handleRemoveFromCart = (productId: string, removeAll = false) => {
     setCart(prevCart => {
-        const productIndex = prevCart.findIndex(p => p.id === productId);
-        if (productIndex > -1) {
-            const newCart = [...prevCart];
-            newCart.splice(productIndex, 1);
-            return newCart;
-        }
-        return prevCart;
+      if (removeAll) {
+        return prevCart.filter(p => p.id !== productId);
+      }
+      const productIndex = prevCart.findIndex(p => p.id === productId);
+      if (productIndex > -1) {
+        const newCart = [...prevCart];
+        newCart.splice(productIndex, 1);
+        return newCart;
+      }
+      return prevCart;
     });
   };
 
@@ -511,7 +516,7 @@ ${cartItemsText}
                             <p className="font-medium">{item.name}</p>
                             <p className="text-sm text-muted-foreground">INR {item.price.toFixed(2)}</p>
                           </div>
-                          <Button variant="ghost" size="icon" onClick={() => handleRemoveFromCart(item.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleRemoveFromCart(item.id, true)}>
                             <X className="h-4 w-4" />
                             <span className="sr-only">Remove item</span>
                           </Button>
@@ -548,6 +553,12 @@ ${cartItemsText}
                         <DropdownMenuItem onClick={() => requestPassword(() => setIsAddDialogOpen(true))}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             <span>Add Product</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href="/admin/orders">
+                                <ShoppingBag className="mr-2 h-4 w-4" />
+                                <span>View Orders</span>
+                            </Link>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -741,7 +752,7 @@ ${cartItemsText}
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <AlertDialogTrigger asChild>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={item.id.startsWith('default-')} >
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()} disabled={item.id.startsWith('default-')} >
                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                 <span>Delete</span>
                                             </DropdownMenuItem>
@@ -793,3 +804,5 @@ ${cartItemsText}
     </div>
   );
 }
+
+    
