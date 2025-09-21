@@ -21,7 +21,7 @@ import {
 import { Loader2, Send, ArrowLeft, MoreVertical, Trash2 } from "lucide-react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,9 +58,8 @@ type ChatDetails = {
     users: string[];
 }
 
-export default function ChatPage() {
-  const params = useParams();
-  const chatId = params.id as string;
+export default function ChatPage({ params }: { params: { id: string } }) {
+  const chatId = params.id;
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -271,3 +270,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
