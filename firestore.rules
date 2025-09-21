@@ -3,96 +3,91 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to get user's role
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+  
+    // Helper function to check if the user is authenticated.
+    function isAuth() {
+      return request.auth != null;
     }
 
-    // Helper function to check if a user is an Admin
-    function isAdmin(userId) {
-      return getUserRole(userId) == 'Admin';
+    // Admins can do anything.
+    match /{path=**} {
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
-    
-    // Helper function to check if a user is a Teacher or Admin
-    function isTeacherOrAdmin(userId) {
-      let role = getUserRole(userId);
-      return role == 'Admin' || role == 'Teacher';
+
+    // Any authenticated user can read from these collections. 
+    // Write access is handled by more specific rules below.
+    match /announcements/{docId} {
+      allow read: if isAuth();
     }
-    
-    // Users can read/write their own profile, Admins can read all.
+    match /products/{docId} {
+      allow read: if isAuth();
+    }
+    match /streams/{docId} {
+      allow read: if isAuth();
+    }
+     match /homework/{docId} {
+      allow read: if isAuth();
+    }
+    match /results/{docId} {
+        allow read: if isAuth();
+    }
+
+    // Users can manage their own user document.
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId || isAdmin(request.auth.uid);
-      allow create: if request.auth.uid != null;
+      allow read, update: if isAuth() && request.auth.uid == userId;
+      allow list: if isAuth(); // Required for chat to find users.
     }
     
-    // Admins have full access to their own records. Others can't access.
-    match /admins/{adminId} {
-        allow read, write: if isAdmin(request.auth.uid);
-    }
-    
-    // Admins/Teachers can read all. Admins can write.
-    match /teachers/{teacherId} {
-        allow read: if isTeacherOrAdmin(request.auth.uid);
-        allow write: if isAdmin(request.auth.uid);
-    }
-    
-    // Admins/Teachers can read all. Admins can write.
-    match /students/{studentId} {
-        allow read: if isTeacherOrAdmin(request.auth.uid);
-        allow write: if isAdmin(request.auth.uid);
-    }
-    
-    // Admins/Teachers can read all. Admins can write.
-    match /drivers/{driverId} {
-        allow read: if isTeacherOrAdmin(request.auth.uid);
-        allow write: if isAdmin(request.auth.uid);
-    }
-
-    // Authenticated users can read. Admins/Teachers can write.
+    // Teachers and Admins can manage content.
     match /announcements/{announcementId} {
-        allow read: if request.auth.uid != null;
-        allow write: if isTeacherOrAdmin(request.auth.uid);
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Teacher'];
     }
-    
-    // Authenticated users can read. Admins/Teachers can write.
     match /homework/{homeworkId} {
-        allow read: if request.auth.uid != null;
-        allow write: if isTeacherOrAdmin(request.auth.uid);
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Teacher'];
     }
-    
-    // Authenticated users can read. Admins can write.
-    match /streams/{streamId} {
-        allow read: if request.auth.uid != null;
-        allow write: if isAdmin(request.auth.uid);
-    }
-    
-    // Authenticated users can read. Admins/Teachers can write.
     match /results/{resultId} {
-        allow read: if request.auth.uid != null;
-        allow write: if isTeacherOrAdmin(request.auth.uid);
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Teacher'];
     }
-    
-    // Authenticated users can read. Admins can write.
-    match /products/{productId} {
-        allow read: if request.auth.uid != null;
-        allow write: if isAdmin(request.auth.uid);
+     match /streams/{streamId} {
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    // Orders: Admins can read all. Users can create, and read their own.
-    match /orders/{orderId} {
-        allow read: if isAdmin(request.auth.uid) || resource.data.userId == request.auth.uid;
-        allow create: if request.auth.uid != null;
-        allow write: if isAdmin(request.auth.uid);
-    }
-    
-    // Chat: Users can only access chats they are a member of.
+    // Chat rules: must be a participant to read/write.
     match /chats/{chatId} {
-      allow read, write: if request.auth.uid in resource.data.users;
-
+      allow read, delete: if isAuth() && request.auth.uid in resource.data.users;
+      allow create: if isAuth() && request.auth.uid in request.resource.data.users;
+      
       match /messages/{messageId} {
-        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
+        allow read, create: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
       }
+    }
+
+    // Order rules: only the user who placed the order or an admin can see it.
+    match /orders/{orderId} {
+      allow read: if isAuth() && (request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin');
+      allow create: if isAuth();
+      allow list: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+    
+    // Admins and Teachers can view sensitive lists.
+    match /students/{studentId} {
+      allow list, read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Teacher'];
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    match /teachers/{teacherId} {
+       allow list, read: if isAuth();
+       allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    match /drivers/{driverId} {
+       allow list, read: if isAuth();
+       allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+    
+    match /admins/{adminId} {
+        allow list, read: if isAuth();
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
   }
 }
