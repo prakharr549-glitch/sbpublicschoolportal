@@ -6,6 +6,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -31,7 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -41,8 +49,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 
 const userRoles = ["Student", "Teacher", "Admin", "Driver"] as const;
+type UserRole = (typeof userRoles)[number];
+const protectedRoles: UserRole[] = ["Admin", "Teacher", "Driver"];
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -64,6 +75,11 @@ export default function ProfilePage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [isProfileLoading, setIsProfileLoading] = useState(true);
+
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [roleToSet, setRoleToSet] = useState<UserRole | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -109,6 +125,37 @@ export default function ProfilePage() {
 
     fetchProfile();
   }, [user, loading, form, router]);
+
+  const handleRoleChange = (selectedRole: UserRole) => {
+    if (protectedRoles.includes(selectedRole)) {
+      setRoleToSet(selectedRole);
+      setIsPasswordDialogOpen(true);
+    } else {
+      form.setValue("role", selectedRole);
+    }
+  };
+
+  const handlePasswordVerification = () => {
+    if (passwordInput === '355995') {
+      if (roleToSet) {
+        form.setValue("role", roleToSet);
+      }
+      setIsPasswordDialogOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      setRoleToSet(null);
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+
+  const handlePasswordDialogClose = () => {
+    setIsPasswordDialogOpen(false);
+    setPasswordInput('');
+    setPasswordError('');
+    setRoleToSet(null);
+  };
+
 
   async function onSubmit(data: ProfileFormValues) {
     if (!user) {
@@ -256,7 +303,10 @@ export default function ProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={(value: UserRole) => handleRoleChange(value)}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select your role" />
@@ -284,6 +334,39 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+       <Dialog open={isPasswordDialogOpen} onOpenChange={handlePasswordDialogClose}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Admin Access Required</DialogTitle>
+                <DialogDescription>
+                    Please enter the administrator password to select this role.
+                </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                <div className="space-y-4 py-2 pb-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" onClick={handlePasswordDialogClose}>Cancel</Button>
+                    <Button type="submit">
+                        <Lock className="mr-2 h-4 w-4"/>
+                        Verify
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
