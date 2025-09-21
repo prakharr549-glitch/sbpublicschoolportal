@@ -6,12 +6,14 @@ import { usePathname } from "next/navigation";
 import {
   Users,
   ShoppingBag,
+  LayoutDashboard,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { SchoolLogo } from "@/components/icons";
 
 const navItems = [
+  { href: "/dashboard", label: "Main Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
 ];
@@ -32,7 +34,7 @@ export function AdminNav({ className }: React.HTMLAttributes<HTMLElement>) {
             href={href}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-primary hover:bg-primary/10",
-              (pathname.startsWith(href)) ? "bg-primary/10 text-primary font-medium" : ""
+              (pathname.startsWith(href) && href !== '/dashboard' || pathname === href) ? "bg-primary/10 text-primary font-medium" : ""
             )}
           >
             <Icon className="h-4 w-4" />
