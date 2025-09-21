@@ -58,7 +58,8 @@ type ChatDetails = {
     users: string[];
 }
 
-export default function ChatPage({ params: { id: chatId } }: { params: { id: string } }) {
+export default function ChatPage({ params }: { params: { id: string } }) {
+  const { id: chatId } = params;
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
