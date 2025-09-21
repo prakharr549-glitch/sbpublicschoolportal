@@ -59,7 +59,7 @@ type ChatDetails = {
 }
 
 export default function ChatPage({ params }: { params: { id: string } }) {
-  const { id: chatId } = params;
+  const chatId = params.id;
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
