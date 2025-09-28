@@ -39,7 +39,7 @@ type ChatDetails = {
     users: string[];
 }
 
-export default function ChatPage({ params }: { params: { id: string } }) {
+export default function ChatPage({ params: { id: chatId } }: { params: { id: string } }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -52,9 +52,9 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   const otherUserId = chatDetails?.users.find(uid => uid !== currentUser?.uid);
 
   useEffect(() => {
-    if (!currentUser || !params.id) return;
+    if (!currentUser || !chatId) return;
 
-    const chatDocRef = doc(db, "chats", params.id);
+    const chatDocRef = doc(db, "chats", chatId);
     const unsubscribeChatDetails = onSnapshot(chatDocRef, (doc) => {
         if (doc.exists()) {
             setChatDetails(doc.data() as ChatDetails);
@@ -69,7 +69,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     });
 
     const messagesQuery = query(
-      collection(db, "chats", params.id, "messages"),
+      collection(db, "chats", chatId, "messages"),
       orderBy("timestamp", "asc")
     );
 
@@ -129,7 +129,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         unsubscribeChatDetails();
         unsubscribeMessages();
     };
-  }, [currentUser, params.id, toast, router]);
+  }, [currentUser, chatId, toast, router]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -145,14 +145,14 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     const readBy = { [currentUser.uid]: true };
 
     try {
-      await addDoc(collection(db, "chats", params.id, "messages"), {
+      await addDoc(collection(db, "chats", chatId, "messages"), {
         text: messageText,
         senderId: currentUser.uid,
         timestamp: serverTimestamp(),
         readBy: readBy,
       });
 
-      const chatDocRef = doc(db, "chats", params.id);
+      const chatDocRef = doc(db, "chats", chatId);
       await updateDoc(chatDocRef, {
         lastMessage: messageText,
         lastMessageTimestamp: serverTimestamp(),
