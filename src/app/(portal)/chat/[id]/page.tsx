@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, use } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -41,8 +41,7 @@ type ChatDetails = {
 
 type PageProps = {
     params: { id: string };
-    searchParams?: { [key: string]: string | string[] | undefined };
-}
+};
 
 export default function ChatPage({ params }: PageProps) {
   const { id: chatId } = params;
@@ -268,3 +267,5 @@ export default function ChatPage({ params }: PageProps) {
     </div>
   );
 }
+
+    
