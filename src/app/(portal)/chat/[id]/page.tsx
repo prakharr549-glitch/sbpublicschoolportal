@@ -40,11 +40,11 @@ type ChatDetails = {
 }
 
 type PageProps = {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 };
 
 export default function ChatPage({ params }: PageProps) {
-  const { id: chatId } = params;
+  const { id: chatId } = use(params);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -267,5 +267,3 @@ export default function ChatPage({ params }: PageProps) {
     </div>
   );
 }
-
-    
