@@ -23,6 +23,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { deleteChat } from "@/ai/flows/delete-chat-flow";
+import * as React from "react";
 
 
 type Message = {
@@ -39,8 +40,8 @@ type ChatDetails = {
     users: string[];
 }
 
-export default function ChatPage({ params }: { params: { id: string } }) {
-  const { id: chatId } = params;
+export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: chatId } = React.use(params);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
