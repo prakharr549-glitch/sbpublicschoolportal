@@ -18,29 +18,11 @@ import {
   Timestamp,
   writeBatch,
 } from "firebase/firestore";
-import { Loader2, Send, ArrowLeft, MoreVertical, Trash2 } from "lucide-react";
+import { Loader2, Send, ArrowLeft } from "lucide-react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { deleteChat } from "@/ai/flows/delete-chat-flow";
-import { cn } from "@/lib/utils";
 
 
 type Message = {
@@ -48,7 +30,6 @@ type Message = {
   text: string;
   senderId: string;
   timestamp: any;
-  deleteAt?: Timestamp;
   readBy: { [key: string]: boolean };
 };
 
@@ -59,6 +40,7 @@ type ChatDetails = {
 }
 
 export default function ChatPage({ params }: { params: { id: string } }) {
+  const { id: chatId } = params;
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -71,9 +53,9 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   const otherUserId = chatDetails?.users.find(uid => uid !== currentUser?.uid);
 
   useEffect(() => {
-    if (!currentUser || !params.id) return;
+    if (!currentUser || !chatId) return;
 
-    const chatDocRef = doc(db, "chats", params.id);
+    const chatDocRef = doc(db, "chats", chatId);
     const unsubscribeChatDetails = onSnapshot(chatDocRef, (doc) => {
         if (doc.exists()) {
             setChatDetails(doc.data() as ChatDetails);
@@ -87,37 +69,46 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         }
     });
 
-    const q = query(
-      collection(db, "chats", params.id, "messages"),
+    const messagesQuery = query(
+      collection(db, "chats", chatId, "messages"),
       orderBy("timestamp", "asc")
     );
 
     const unsubscribeMessages = onSnapshot(
-      q,
+      messagesQuery,
       async (querySnapshot) => {
         const messagesData: Message[] = [];
-        const now = Timestamp.now();
         const batch = writeBatch(db);
-        
+        let hasUnread = false;
+
         querySnapshot.forEach((doc) => {
           const data = doc.data() as Omit<Message, 'id'>;
-          if (!data.deleteAt || data.deleteAt > now) {
-            messagesData.push({ id: doc.id, ...data });
+          messagesData.push({ id: doc.id, ...data });
 
-            // Mark message as read
-            if (currentUser?.uid && data.senderId !== currentUser.uid && !data.readBy?.[currentUser.uid]) {
-              const messageRef = doc.ref;
-              batch.update(messageRef, { [`readBy.${currentUser.uid}`]: true });
-            }
+          // Mark message as read
+          if (currentUser?.uid && data.senderId !== currentUser.uid && !data.readBy?.[currentUser.uid]) {
+            hasUnread = true;
+            const messageRef = doc.ref;
+            batch.update(messageRef, { [`readBy.${currentUser.uid}`]: true });
           }
         });
-
-        try {
+        
+        if (hasUnread && currentUser?.uid) {
+          try {
             await batch.commit();
-        } catch (error) {
-            // It's possible the chat was deleted between the read and the commit
+            // Update last message read status on the chat document
+            const latestMessage = messagesData[messagesData.length - 1];
+            if(latestMessage.senderId !== currentUser.uid) {
+              await updateDoc(chatDocRef, {
+                  [`lastMessageReadBy.${currentUser.uid}`]: true
+              });
+            }
+          } catch (error) {
+             // It's possible the chat was deleted between the read and the commit
             console.warn("Could not mark messages as read, chat may be deleted.", error);
+          }
         }
+
         setMessages(messagesData);
         setIsLoading(false);
       },
@@ -139,7 +130,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         unsubscribeChatDetails();
         unsubscribeMessages();
     };
-  }, [currentUser, params.id, toast, router]);
+  }, [currentUser, chatId, toast, router]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -152,20 +143,21 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     const messageText = newMessage;
     setNewMessage("");
 
+    const readBy = { [currentUser.uid]: true };
+
     try {
-       const deleteAtTimestamp = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
-      
-      await addDoc(collection(db, "chats", params.id, "messages"), {
+      await addDoc(collection(db, "chats", chatId, "messages"), {
         text: messageText,
         senderId: currentUser.uid,
         timestamp: serverTimestamp(),
-        deleteAt: deleteAtTimestamp,
-        readBy: { [currentUser.uid]: true },
+        readBy: readBy,
       });
-      const chatDocRef = doc(db, "chats", params.id);
+
+      const chatDocRef = doc(db, "chats", chatId);
       await updateDoc(chatDocRef, {
         lastMessage: messageText,
         lastMessageTimestamp: serverTimestamp(),
+        lastMessageReadBy: readBy
       });
     } catch (error) {
       console.error("Error sending message:", error);
@@ -178,21 +170,6 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     }
   };
   
-  const handleDeleteConversation = async () => {
-    try {
-        await deleteChat(params.id);
-        // The snapshot listener in useEffect will detect the deletion
-        // and redirect the user.
-    } catch (error) {
-        console.error("Error deleting conversation:", error);
-        toast({
-            variant: "destructive",
-            title: "Deletion Failed",
-            description: "Could not delete the conversation."
-        });
-    }
-  };
-
   const getParticipantDetails = (senderId: string) => {
     if (!chatDetails) return { name: "Loading...", avatar: "" };
     return {
@@ -202,7 +179,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   }
 
   const otherUserName = otherUserId ? getParticipantDetails(otherUserId).name : 'Chat';
-  
+
   if (!chatDetails) {
      return (
         <div className="flex h-full items-center justify-center">
