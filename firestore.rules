@@ -1,96 +1,121 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper functions to check user roles
-    function isUserAuthenticated() {
+
+    // Helper functions to check user roles from their custom claims
+    function isAuth() {
       return request.auth != null;
     }
-
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    
+    function isAdmin() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    function isAdmin() {
-      return isUserAuthenticated() && getUserRole(request.auth.uid) == 'Admin';
+    function isTeacher() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Teacher';
     }
     
-    function isTeacher() {
-        return isUserAuthenticated() && getUserRole(request.auth.uid) == 'Teacher';
+    function isStudent() {
+       return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Student';
     }
 
-    // Default deny all
+    // Default deny all access
     match /{document=**} {
       allow read, write: if false;
     }
-
-    // Users can manage their own profile and list other users for chat
+    
+    // USERS
+    // Allow users to read/update their own profile
+    // Allow admins to manage any user
+    // Allow all authenticated users to list users (for starting new chats)
     match /users/{userId} {
-      allow read: if isUserAuthenticated();
-      allow update: if request.auth.uid == userId;
-      allow create: if isUserAuthenticated();
+      allow read, update: if isAuth() && request.auth.uid == userId;
+      allow list: if isAuth();
+      allow write: if isAdmin();
+      allow get: if isAuth();
     }
     
-    match /admins/{adminId} {
-        allow read: if isUserAuthenticated();
-        allow create, update, delete: if isAdmin();
-    }
-    
-    match /teachers/{teacherId} {
-        allow read: if isUserAuthenticated();
-        allow create, update, delete: if isAdmin();
-    }
-    
-    match /drivers/{driverId} {
-        allow read: if isUserAuthenticated();
-        allow create, update, delete: if isAdmin();
-    }
-    
-    match /students/{studentId} {
-        allow read: if isAdmin() || isTeacher();
-        allow create, update, delete: if isAdmin();
-    }
-    
+    // ANNOUNCEMENTS
+    // Allow any authenticated user to read
+    // Allow Admin/Teacher to write
     match /announcements/{announcementId} {
-      allow read: if isUserAuthenticated();
-      allow create, update, delete: if isAdmin() || isTeacher();
+      allow read: if isAuth();
+      allow write: if isAdmin() || isTeacher();
     }
     
+    // HOMEWORK
+    // Allow any authenticated user to read
+    // Allow Admin/Teacher to write
     match /homework/{homeworkId} {
-      allow read: if isUserAuthenticated();
-      allow create, update, delete: if isAdmin() || isTeacher();
+      allow read: if isAuth();
+      allow write: if isAdmin() || isTeacher();
     }
-
+    
+    // RESULTS
+    // Allow any authenticated user to read
+    // Allow Admin/Teacher to write
     match /results/{resultId} {
-        allow read: if isUserAuthenticated();
-        allow create, delete: if isAdmin() || isTeacher();
+      allow read: if isAuth();
+      allow write: if isAdmin() || isTeacher();
     }
-
+    
+    // STREAMS (LIVESTREAM)
+    // Allow any authenticated user to read
+    // Allow Admin to write
     match /streams/{streamId} {
-        allow read: if isUserAuthenticated();
-        allow create, delete: if isAdmin();
-    }
-    
-    match /products/{productId} {
-        allow read: if isUserAuthenticated();
-        allow create, update, delete: if isAdmin();
-    }
-    
-    match /orders/{orderId} {
-      allow read: if isAdmin() || request.auth.uid == resource.data.userId;
-      allow create: if isUserAuthenticated();
-      allow update, delete: if isAdmin();
+      allow read: if isAuth();
+      allow write: if isAdmin();
     }
 
+    // PRODUCTS (SHOP)
+    // Allow any authenticated user to read
+    // Allow Admin to write
+    match /products/{productId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ORDERS
+    // Allow users to read their own orders.
+    // Allow Admins to read all orders.
+    match /orders/{orderId} {
+      allow read: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuth();
+      allow list: if isAdmin();
+    }
+    
+    // CHATS
+    // Allow users to read/write chats they are a member of
+    // Admins can read any chat
     match /chats/{chatId} {
-      allow read, create, update: if isUserAuthenticated() && request.auth.uid in resource.data.users;
-      allow delete: if isUserAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
+      allow get, list, create: if isAuth();
+      allow read, write: if isAuth() && (request.auth.uid in resource.data.users || isAdmin());
       
       match /messages/{messageId} {
-        allow read, create, update: if isUserAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users;
-        allow delete: if isAdmin();
+         allow read, write: if isAuth() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.users || isAdmin());
       }
+    }
+    
+    // SECURE LISTS
+    // Only Admins/Teachers can read these lists
+    // Only Admins can write
+    match /admins/{adminId} {
+        allow read: if isAdmin() || isTeacher();
+        allow write: if isAdmin();
+    }
+    match /teachers/{teacherId} {
+        allow read: if isAdmin() || isTeacher();
+        allow write: if isAdmin();
+    }
+    match /drivers/{driverId} {
+        allow read: if isAdmin() || isTeacher();
+        allow write: if isAdmin();
+    }
+    match /students/{studentId} {
+        allow read: if isAdmin() || isTeacher();
+        allow write: if isAdmin();
     }
   }
 }
