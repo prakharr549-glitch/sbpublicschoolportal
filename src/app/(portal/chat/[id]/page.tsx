@@ -39,7 +39,13 @@ type ChatDetails = {
     users: string[];
 }
 
-export default function ChatPage({ params: { id: chatId } }: { params: { id: string } }) {
+type PageProps = {
+    params: { id: string };
+    searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default function ChatPage({ params }: PageProps) {
+  const { id: chatId } = params;
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
