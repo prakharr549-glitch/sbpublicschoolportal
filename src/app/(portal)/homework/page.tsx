@@ -67,8 +67,9 @@ import {
   } from "@/components/ui/select";
 import { Loader2, PlusCircle, BookOpen, Trash2, CalendarIcon, MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { addDoc, collection, onSnapshot, query, orderBy, Timestamp, doc, deleteDoc } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import { addDoc, collection, onSnapshot, query, orderBy, Timestamp, doc, deleteDoc, getDoc } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -100,6 +101,8 @@ export default function HomeworkPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [classFilter, setClassFilter] = useState("all");
   const { toast } = useToast();
+  const [user, authLoading] = useAuthState(auth);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const form = useForm<HomeworkFormValues>({
     resolver: zodResolver(homeworkFormSchema),
@@ -111,6 +114,17 @@ export default function HomeworkPage() {
       dueDate: new Date(),
     },
   });
+
+  useEffect(() => {
+    if (user && !authLoading) {
+      const userDocRef = doc(db, "users", user.uid);
+      getDoc(userDocRef).then(userDoc => {
+        if (userDoc.exists()) {
+          setUserRole(userDoc.data().role);
+        }
+      });
+    }
+  }, [user, authLoading]);
 
   useEffect(() => {
     const q = query(collection(db, "homework"), orderBy("assignedDate", "desc"));
@@ -175,7 +189,8 @@ export default function HomeworkPage() {
     }
   }
   
-  const isLoading = isDataLoading;
+  const isLoading = authLoading || isDataLoading;
+  const canManage = userRole === 'Admin' || userRole === 'Teacher';
   
   const availableClasses = ["all", ...Array.from(new Set(homework.map(hw => hw.class)))];
   
@@ -204,10 +219,12 @@ export default function HomeworkPage() {
                     ))}
                 </SelectContent>
             </Select>
-            <Button onClick={() => setIsDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Homework
-            </Button>
+            {canManage && (
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Homework
+              </Button>
+            )}
         </div>
       </div>
 
@@ -353,43 +370,45 @@ export default function HomeworkPage() {
                      <p className="text-xs text-muted-foreground whitespace-nowrap">
                       Posted on {hw.assignedDate.toDate().toLocaleDateString()}
                     </p>
-                    <AlertDialog>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Delete</span>
-                                </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete this
-                                homework assignment.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                                className="bg-destructive hover:bg-destructive/90"
-                                onClick={() => handleDelete(hw.id)}>
-                                Continue
-                            </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                        </AlertDialog>
+                    {canManage && (
+                      <AlertDialog>
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <span>Delete</span>
+                                  </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete this
+                                  homework assignment.
+                              </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                  className="bg-destructive hover:bg-destructive/90"
+                                  onClick={() => handleDelete(hw.id)}>
+                                  Continue
+                              </AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                          </AlertDialog>
+                    )}
                   </div>
                 </div>
               </CardHeader>
