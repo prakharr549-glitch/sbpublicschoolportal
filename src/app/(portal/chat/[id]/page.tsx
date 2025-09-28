@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, use } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -40,12 +40,12 @@ type ChatDetails = {
 }
 
 type PageProps = {
-    params: { id: string };
+    params: Promise<{ id: string }>;
     searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 export default function ChatPage({ params }: PageProps) {
-  const { id: chatId } = params;
+  const { id: chatId } = use(params);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
