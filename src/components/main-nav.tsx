@@ -38,7 +38,6 @@ const navItems = [
 const userRoleNavItems = [
   { href: "/admins", label: "Admins", icon: UserCog },
   { href: "/teachers", label: "Teachers", icon: GraduationCap },
-  { href: "/students", label: "Students", icon: User },
   { href: "/drivers", label: "Drivers", icon: Truck },
 ]
 
