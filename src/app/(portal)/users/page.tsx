@@ -11,19 +11,40 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+  } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, MoreHorizontal, Phone } from "lucide-react";
+import { Loader2, MoreHorizontal, Phone, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type User = {
   id: string;
@@ -56,6 +77,11 @@ export default function UsersPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const { toast } = useToast();
 
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
+
   useEffect(() => {
     const q = query(collection(db, "users"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -85,12 +111,72 @@ export default function UsersPage() {
 
     return () => unsubscribe();
   }, [toast]);
+  
+  const handlePasswordVerification = () => {
+    if (passwordInput === '355995') {
+      if (protectedAction) {
+        protectedAction();
+      }
+      setIsPasswordDialogOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      setProtectedAction(null);
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+  
+  const requestPassword = (action: () => void) => {
+    setProtectedAction(() => action);
+    setIsPasswordDialogOpen(true);
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-bold tracking-tight font-headline">
         User Management
       </h1>
+
+      <Dialog open={isPasswordDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+              setPasswordInput('');
+              setPasswordError('');
+              setProtectedAction(null);
+          }
+          setIsPasswordDialogOpen(isOpen);
+      }}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Admin Access Required</DialogTitle>
+                <DialogDescription>
+                    Please enter the administrator password to perform this action.
+                </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); handlePasswordVerification(); }}>
+                <div className="space-y-4 py-2 pb-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit">
+                        <Lock className="mr-2 h-4 w-4"/>
+                        Verify
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <CardTitle>Registered Users</CardTitle>
@@ -125,16 +211,16 @@ export default function UsersPage() {
                         </div>
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone || 'N/A'}</TableCell>
+                      <TableCell>{user.role === 'Student' ? 'N/A' : user.phone || 'N/A'}</TableCell>
                       <TableCell>{user.role}</TableCell>
                       <TableCell className="text-right">
-                        {user.phone && (
+                        {user.phone && user.role !== 'Student' && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
+                                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.preventDefault(); requestPassword(() => {}); }}>
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
