@@ -10,7 +10,6 @@ import {
   Megaphone,
   LayoutDashboard,
   Radio,
-  MessageSquare,
   Award,
   History,
 } from "lucide-react";
@@ -25,7 +24,6 @@ const navItems = [
   { href: "/about", label: "About Us", icon: Info },
   { href: "/homework", label: "Homework", icon: BookOpen },
   { href: "/livestream", label: "Live Stream", icon: Radio },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/results", label: "Results", icon: Award },
   { href: "/my-orders", label: "My Orders", icon: History },
 ];
