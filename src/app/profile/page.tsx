@@ -60,6 +60,7 @@ const profileFormSchema = z.object({
     message: "Name must be at least 2 characters.",
   }),
   email: z.string().email(),
+  phone: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit phone number.").optional().or(z.literal('')),
   photoURL: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   role: z.enum(userRoles, {
     required_error: "Please select a role.",
@@ -86,6 +87,7 @@ export default function ProfilePage() {
     defaultValues: {
       name: "",
       email: "",
+      phone: "",
       photoURL: "",
       role: "Student",
     },
@@ -109,6 +111,7 @@ export default function ProfilePage() {
         form.reset({
           name: data.name || user.displayName || "",
           email: data.email || user.email || "",
+          phone: data.phone || "",
           photoURL: data.photoURL || user.photoURL || "",
           role: data.role || "Student",
         });
@@ -116,6 +119,7 @@ export default function ProfilePage() {
         form.reset({
           name: user.displayName || "",
           email: user.email || "",
+          phone: "",
           photoURL: user.photoURL || "",
           role: "Student",
         });
@@ -176,6 +180,7 @@ export default function ProfilePage() {
         await setDoc(doc(db, "users", user.uid), { 
             name: data.name,
             email: data.email,
+            phone: data.phone,
             photoURL: data.photoURL,
             role: data.role,
         }, { merge: true });
@@ -292,6 +297,19 @@ export default function ProfilePage() {
                       <FormLabel>Email Address</FormLabel>
                       <FormControl>
                         <Input placeholder="Your email" {...field} disabled />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number (Optional)</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="e.g., 9876543210" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
