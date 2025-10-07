@@ -12,6 +12,7 @@ import {
   Radio,
   Award,
   History,
+  Users,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/livestream", label: "Live Stream", icon: Radio },
   { href: "/results", label: "Results", icon: Award },
   { href: "/my-orders", label: "My Orders", icon: History },
+  { href: "/users", label: "Users", icon: Users },
 ];
 
 export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
