@@ -88,14 +88,16 @@ export default function UsersPage() {
       const usersData: User[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        usersData.push({
-          id: doc.id,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          photoURL: data.photoURL,
-          role: data.role,
-        });
+        if (data.role !== 'Student') {
+            usersData.push({
+            id: doc.id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            photoURL: data.photoURL,
+            role: data.role,
+            });
+        }
       });
       setUsers(usersData);
       setIsDataLoading(false);
@@ -211,10 +213,10 @@ export default function UsersPage() {
                         </div>
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.role === 'Student' ? 'N/A' : user.phone || 'N/A'}</TableCell>
+                      <TableCell>{user.phone || 'N/A'}</TableCell>
                       <TableCell>{user.role}</TableCell>
                       <TableCell className="text-right">
-                        {user.phone && user.role !== 'Student' && (
+                        {user.phone && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.preventDefault(); requestPassword(() => {}); }}>
