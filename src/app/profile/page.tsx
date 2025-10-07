@@ -65,7 +65,26 @@ const profileFormSchema = z.object({
   role: z.enum(userRoles, {
     required_error: "Please select a role.",
   }),
+  class: z.string().optional(),
+  rollNumber: z.string().optional(),
+}).refine(data => {
+    if (data.role === 'Student') {
+        return !!data.class && data.class.length > 0;
+    }
+    return true;
+}, {
+    message: "Class is required for students.",
+    path: ["class"],
+}).refine(data => {
+    if (data.role === 'Student') {
+        return !!data.rollNumber && data.rollNumber.length > 0;
+    }
+    return true;
+}, {
+    message: "Roll number is required for students.",
+    path: ["rollNumber"],
 });
+
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -90,10 +109,13 @@ export default function ProfilePage() {
       phone: "",
       photoURL: "",
       role: "Student",
+      class: "",
+      rollNumber: "",
     },
   });
   
   const photoURL = form.watch("photoURL");
+  const role = form.watch("role");
 
   useEffect(() => {
     if (loading) {
@@ -114,6 +136,8 @@ export default function ProfilePage() {
           phone: data.phone || "",
           photoURL: data.photoURL || user.photoURL || "",
           role: data.role || "Student",
+          class: data.class || "",
+          rollNumber: data.rollNumber || "",
         });
       } else {
         form.reset({
@@ -122,6 +146,8 @@ export default function ProfilePage() {
           phone: "",
           photoURL: user.photoURL || "",
           role: "Student",
+          class: "",
+          rollNumber: "",
         });
       }
       setIsProfileLoading(false);
@@ -177,13 +203,20 @@ export default function ProfilePage() {
             photoURL: data.photoURL 
         });
         
-        await setDoc(doc(db, "users", user.uid), { 
+        const profileData: any = { 
             name: data.name,
             email: data.email,
             phone: data.phone,
             photoURL: data.photoURL,
             role: data.role,
-        }, { merge: true });
+        };
+
+        if (data.role === 'Student') {
+            profileData.class = data.class;
+            profileData.rollNumber = data.rollNumber;
+        }
+        
+        await setDoc(doc(db, "users", user.uid), profileData, { merge: true });
         
         toast({
             title: "Profile Updated",
@@ -342,6 +375,37 @@ export default function ProfilePage() {
                     </FormItem>
                   )}
                 />
+
+                {role === 'Student' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                            control={form.control}
+                            name="class"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Class</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., 10th" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="rollNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Roll Number</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., 21" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                )}
                 
                 <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
