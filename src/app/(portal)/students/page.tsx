@@ -173,7 +173,7 @@ export default function StudentsPage() {
 
   const isLoading = (isVerified && isDataLoading);
   
-  const availableClasses = ["all", ...Array.from(new Set(students.map(s => s.class)))];
+  const availableClasses = ["all", ...Array.from(new Set(students.map(s => s.class).filter(Boolean)))];
   
   const filteredStudents = students.filter(student => {
     if (classFilter === "all" || !student.class) return true;
