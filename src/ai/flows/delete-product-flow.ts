@@ -7,18 +7,23 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { getFirestore, doc, deleteDoc } from 'firebase/firestore';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 
-// Ensure Firebase Admin is initialized
-let adminApp: App;
-if (!getApps().length) {
-  adminApp = initializeApp();
-} else {
-  adminApp = getApps()[0];
-}
+// This flow now uses the client-side SDK, which is compatible with Next.js builds.
+// The firebase config is pulled from the existing client-side setup.
+const firebaseConfig = {
+  projectId: "studio-4606164625-37d65",
+  appId: "1:422281319062:web:9a3233c70751ce27b9a8b7",
+  storageBucket: "studio-4606164625-37d65.appspot.com",
+  apiKey: "AIzaSyDF9s8FC9dik7MyJE0QbJNgYCzmRjCPkSs",
+  authDomain: "studio-4606164625-37d65.firebaseapp.com",
+  measurementId: "",
+  messagingSenderId: "422281319062",
+};
 
-const db = getFirestore(adminApp);
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const db = getFirestore(app);
 
 const DeleteProductInputSchema = z.string().describe("The ID of the product to delete.");
 export type DeleteProductInput = z.infer<typeof DeleteProductInputSchema>;
@@ -39,7 +44,8 @@ const deleteProductFlow = ai.defineFlow(
     }
     
     try {
-      await db.collection('products').doc(productId).delete();
+      const productRef = doc(db, 'products', productId);
+      await deleteDoc(productRef);
     } catch (error) {
       console.error("Error deleting product in flow:", error);
       // It's often better to let the error propagate to be handled by the caller
@@ -47,5 +53,3 @@ const deleteProductFlow = ai.defineFlow(
     }
   }
 );
-
-    
