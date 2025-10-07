@@ -62,7 +62,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, PlusCircle, Trash2, Phone, MoreHorizontal, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { addDoc, collection, onSnapshot, query, doc, deleteDoc } from "firebase/firestore";
+import { addDoc, collection, onSnapshot, query, doc, deleteDoc, where } from "firebase/firestore";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
@@ -98,7 +98,6 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [classFilter, setClassFilter] = useState("all");
   const { toast } = useToast();
@@ -110,22 +109,10 @@ export default function StudentsPage() {
   const [isVerified, setIsVerified] = useState(false);
   const [protectedAction, setProtectedAction] = useState<(() => void) | null>(null);
 
-
-  const form = useForm<StudentFormValues>({
-    resolver: zodResolver(studentFormSchema),
-    defaultValues: {
-      name: "",
-      class: "",
-      rollNumber: "",
-      phone: "",
-      address: "",
-    },
-  });
-
   useEffect(() => {
     if (!isVerified) return;
 
-    const q = query(collection(db, "students"));
+    const q = query(collection(db, "users"), where("role", "==", "Student"));
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
@@ -172,10 +159,9 @@ export default function StudentsPage() {
       if (protectedAction) {
         protectedAction();
       }
-      setIsPasswordDialogOpen(false);
+      setProtectedAction(null); // Close the dialog by resetting the action
       setPasswordInput('');
       setPasswordError('');
-      setProtectedAction(null);
     } else {
       setPasswordError('Incorrect password. Please try again.');
     }
@@ -183,44 +169,6 @@ export default function StudentsPage() {
   
   const requestPassword = (action: () => void) => {
     setProtectedAction(() => action);
-    setIsPasswordDialogOpen(true);
-  }
-
-
-  async function onSubmit(data: StudentFormValues) {
-    try {
-      await addDoc(collection(db, "students"), data);
-      toast({
-        title: "Student Added",
-        description: `${data.name} has been added.`,
-      });
-      form.reset();
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error("Error adding student: ", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "There was a problem adding the student.",
-      });
-    }
-  }
-
-  async function handleDelete(studentId: string) {
-    try {
-      await deleteDoc(doc(db, "students", studentId));
-      toast({
-        title: "Student Deleted",
-        description: "The student has been successfully removed.",
-      });
-    } catch (error) {
-      console.error("Error deleting student:", error);
-      toast({
-        variant: "destructive",
-        title: "Deletion Failed",
-        description: "There was a problem deleting the student.",
-      });
-    }
   }
 
   const isLoading = (isVerified && isDataLoading);
@@ -228,7 +176,7 @@ export default function StudentsPage() {
   const availableClasses = ["all", ...Array.from(new Set(students.map(s => s.class)))];
   
   const filteredStudents = students.filter(student => {
-    if (classFilter === "all") return true;
+    if (classFilter === "all" || !student.class) return true;
     return student.class === classFilter;
   });
 
@@ -271,106 +219,9 @@ export default function StudentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">
-          Student Management
-        </h1>
-        <Button onClick={() => requestPassword(() => setIsDialogOpen(true))}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add New Student
-        </Button>
-      </div>
-
-       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add New Student</DialogTitle>
-              <DialogDescription>
-                Fill in the details below to add a new student.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Alex Johnson" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="class"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Class</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Grade 10A" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="rollNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Roll Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 25" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                          <Input type="tel" placeholder="e.g., 9876543210" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Enter student's address" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                <DialogFooter className="mt-4 pt-4 border-t sticky bottom-0 bg-background">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Student
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+      <h1 className="text-3xl font-bold tracking-tight font-headline">
+        Student Directory
+      </h1>
         
         <Dialog open={protectedAction !== null} onOpenChange={(isOpen) => {
           if (!isOpen) {
@@ -378,7 +229,6 @@ export default function StudentsPage() {
               setPasswordError('');
               setProtectedAction(null);
           }
-          setIsPasswordDialogOpen(isOpen);
       }}>
         <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -443,7 +293,6 @@ export default function StudentsPage() {
                     <TableHead>Class</TableHead>
                     <TableHead>Roll No.</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead>Address</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -452,70 +301,49 @@ export default function StudentsPage() {
                     filteredStudents.map((student) => (
                       <TableRow key={student.id}>
                         <TableCell className="font-medium whitespace-nowrap">{student.name}</TableCell>
-                        <TableCell>{student.class}</TableCell>
-                        <TableCell>{student.rollNumber}</TableCell>
-                        <TableCell>{student.phone}</TableCell>
-                        <TableCell className="min-w-[250px]">{student.address}</TableCell>
+                        <TableCell>{student.class || "N/A"}</TableCell>
+                        <TableCell>{student.rollNumber || "N/A"}</TableCell>
+                        <TableCell>{student.phone || "N/A"}</TableCell>
                         <TableCell className="text-right">
-                          <AlertDialog>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem asChild>
-                                  <a href={`tel:${student.phone}`}>
-                                    <Phone className="mr-2 h-4 w-4" />
-                                    <span>Call</span>
-                                  </a>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <a
-                                    href={`https://wa.me/${student.phone}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <WhatsAppIcon className="mr-2 h-4 w-4" />
-                                    <span>WhatsApp</span>
-                                  </a>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the student record for {student.name}.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-destructive hover:bg-destructive/90"
-                                  onClick={() => requestPassword(() => handleDelete(student.id))}
-                                >
-                                  Continue
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                {student.phone ? (
+                                    <>
+                                        <DropdownMenuItem asChild>
+                                        <a href={`tel:${student.phone}`}>
+                                            <Phone className="mr-2 h-4 w-4" />
+                                            <span>Call</span>
+                                        </a>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                        <a
+                                            href={`https://wa.me/${student.phone}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            <WhatsAppIcon className="mr-2 h-4 w-4" />
+                                            <span>WhatsApp</span>
+                                        </a>
+                                        </DropdownMenuItem>
+                                    </>
+                                ) : (
+                                    <DropdownMenuItem disabled>No contact info</DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={5} className="h-24 text-center">
                         No students found for the selected filter.
                       </TableCell>
                     </TableRow>

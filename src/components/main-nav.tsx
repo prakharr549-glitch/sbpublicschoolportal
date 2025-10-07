@@ -30,7 +30,11 @@ const navItems = [
   { href: "/users", label: "Users", icon: Users },
 ];
 
-export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
+const studentNavItems = [
+    { href: "/students", label: "Students", icon: Users },
+]
+
+export function MainNav({ className, userRole }: React.HTMLAttributes<HTMLElement> & { userRole: string | null }) {
   const pathname = usePathname();
 
   return (
@@ -42,6 +46,19 @@ export function MainNav({ className }: React.HTMLAttributes<HTMLElement>) {
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-1 px-4">
           {navItems.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-primary hover:bg-primary/10",
+                (pathname === href) ? "bg-primary/10 text-primary font-medium" : ""
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Link>
+          ))}
+          {userRole === 'Student' && studentNavItems.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}

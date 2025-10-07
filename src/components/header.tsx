@@ -14,7 +14,7 @@ import { MainNav } from "@/components/main-nav";
 import { DialogTitle as VisuallyHidden } from "@/components/ui/dialog";
 
 
-export function Header() {
+export function Header({ userRole }: { userRole: string | null }) {
   return (
     <header className="flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
       <div className="flex items-center gap-4 md:hidden">
@@ -31,7 +31,7 @@ export function Header() {
                     <VisuallyHidden>Navigation Menu</VisuallyHidden>
                 </SheetTitle>
              </SheetHeader>
-            <MainNav />
+            <MainNav userRole={userRole} />
           </SheetContent>
         </Sheet>
       </div>
